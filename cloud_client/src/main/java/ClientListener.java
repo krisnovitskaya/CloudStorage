@@ -25,7 +25,8 @@ public class ClientListener implements Runnable{
         try {
             while(!networkClient.isCancel()) {
                     messageServer = reader.readLine();
-                        if(!messageServer.startsWith("/")) out.writeUTF(messageServer); //login
+                    if(!messageServer.startsWith("/")) out.writeUTF(messageServer); //login
+                    //загрузка на сервер
                     if(messageServer.startsWith("/upload")){
                         String[] parts = messageServer.split(" ", 2);
                         if(new File(parts[1]).exists()){
@@ -34,8 +35,16 @@ public class ClientListener implements Runnable{
                         } else {
                             System.out.println("wrong path");
                         }
-
                     }
+                    //скачивание с сервера
+                    if(messageServer.startsWith("/download")){
+                        out.writeUTF(messageServer);
+                        System.out.println("запрос на скачивание");
+                    }
+                if(messageServer.startsWith("/info")){
+                    out.writeUTF(messageServer);
+                    System.out.println("запрос info");
+                }
                     if(messageServer.equals(END_COMMAND)){
                         networkClient.setIsCancel();
                     }
@@ -65,6 +74,8 @@ public class ClientListener implements Runnable{
         System.out.println("done");
 
         }
+
+
 
     }
 

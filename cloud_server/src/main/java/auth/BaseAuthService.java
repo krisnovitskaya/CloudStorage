@@ -9,7 +9,7 @@ public class BaseAuthService implements AuthService {
     private static int countID;
     private static List<String> userData;
 
-    private static final File userCountSave = new File("./cloud_server/src/main/java/auth/userdata.txt");
+    private static final File userCountSave = new File("./cloud_server/src/main/java/auth/userdata.txt"); //хранение существующих id
 
 
     public BaseAuthService(){
@@ -38,7 +38,7 @@ public class BaseAuthService implements AuthService {
     }
 
     @Override
-    public String getUserName(String login) {
+    public String getUserName(String login) { //упрощенный логин без пароля
         for (String data : userData) {
             if(data.equals(login)) return login;
         }
@@ -48,6 +48,8 @@ public class BaseAuthService implements AuthService {
         return "login" + countID;
     }
 
+
+    //обновить файл с сохраненнными id
     private void updateCount() {
         try {
             FileWriter writer = new FileWriter(userCountSave);

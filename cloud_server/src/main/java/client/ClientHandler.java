@@ -72,30 +72,58 @@ public class ClientHandler {
             }
             System.out.println(nick + " want " + message);
             if(message.startsWith("/upload")){      //загрузка на сервер
-                sendMessage("загрузка");
-                String fileName = in.readUTF();
-                File file = new File(clientDir.getPath() +"/" + fileName);
-                file.createNewFile();
-                long filelength = Long.parseLong(in.readUTF()); //передача длины для выхода из цикла
-                System.out.println(filelength);
-                try (FileOutputStream os = new FileOutputStream(file)) {
-                    byte[] buffer = new byte[8192];
-                    while (true) {
-                        if (file.length() == filelength) break;
-                        int r = in.read(buffer);
-                        //System.out.println(r);
-                        os.write(buffer, 0, r);
-                    }
-                }
-                System.out.println("File uploaded!");
+                uploadFileServer();
             }else if(message.startsWith("/download")){
-                sendMessage("закачка");
+                String[] filename = message.split(" ", 2);
+                File file = new File(clientDir + "/" + filename[1]);
+                if(file.exists())  {
+                    sendMessage("/download" + " " + nick + " "+ filename[1]);
+                    downloadFileClient(file);
+                } else {
+                    sendMessage("wrong filename");
+                }
+
             } else if (message.startsWith("/info")){
                 sendInfo();
             }
 
         }
     }
+
+    private void downloadFileClient(File file) throws IOException{
+
+        InputStream is = new FileInputStream(file);
+        byte [] buffer = new byte[8192];
+
+        out.writeUTF(String.valueOf(file.length())); //длина файла
+        while (true) {
+            int readBytes = is.read(buffer);
+            //System.out.println(readBytes);
+            if(readBytes == -1) break;
+            out.write(buffer, 0, readBytes);
+        }
+        System.out.println("done");
+    }
+
+    private void uploadFileServer() throws IOException{
+        sendMessage("загрузка");
+        String fileName = in.readUTF();
+        File file = new File(clientDir.getPath() +"/" + fileName);
+        file.createNewFile();
+        long filelength = Long.parseLong(in.readUTF()); //передача длины для выхода из цикла
+        System.out.println(filelength);
+        try (FileOutputStream os = new FileOutputStream(file)) {
+            byte[] buffer = new byte[8192];
+            while (true) {
+                if (file.length() == filelength) break;
+                int r = in.read(buffer);
+                //System.out.println(r);
+                os.write(buffer, 0, r);
+            }
+        }
+        System.out.println("File uploaded!");
+    }
+
 
     private void sendInfo() throws IOException {
         File[] files = clientDir.listFiles();

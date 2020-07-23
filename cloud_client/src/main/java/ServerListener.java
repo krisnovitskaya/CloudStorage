@@ -1,4 +1,6 @@
 import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
@@ -23,7 +25,9 @@ public class ServerListener implements Runnable {
             String message;
             while (!networkClient.isCancel()) {
                 message = in.readUTF();
-                System.out.println("Server:" + message);
+                if(message.startsWith("/download")) {
+                    downloadFile(message);
+                } else System.out.println("Server:" + message);
             }
         } catch (IOException e) {
             System.out.println("Connection has been closed.");
@@ -34,5 +38,26 @@ public class ServerListener implements Runnable {
                 e.printStackTrace();
             }
         }
+    }
+
+    private void downloadFile(String message) throws IOException {
+
+        String[] strings = message.split(" ", 3);    // download nick filename
+
+        //создается папка по логину
+        File dir = new File("./common/loginDirs/" + strings[1]);
+        if(!dir.exists()) dir.mkdir();
+        File file = new File("./common/loginDirs/" + strings[1] + "/" + strings[2]);
+        long fileLength = Long.parseLong(in.readUTF());
+        try (FileOutputStream os = new FileOutputStream(file)) {
+            byte[] buffer = new byte[8192];
+            while (true) {
+                if (file.length() == fileLength) break;
+                int r = in.read(buffer);
+                //System.out.println(r);
+                os.write(buffer, 0, r);
+            }
+        }
+        System.out.println("File uploaded!" + " path: " + file.getAbsolutePath());
     }
 }
