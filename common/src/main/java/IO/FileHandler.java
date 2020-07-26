@@ -49,8 +49,27 @@ public class FileHandler implements Runnable {
                     } else {
                         os.writeUTF("File not exists");
                     }
-                } else {
-                    // TODO: 7/23/2020 upload
+                } else if(command.equals("./upload")){
+                    String fileName = is.readUTF(); //имя
+                    long len = is.readLong();// длина
+                    File file = new File(serverFilePath + "/" + fileName);
+                    if(!file.exists()) {
+                        file.createNewFile();
+                    }
+                    if(len != 0) { //клиент зависал при нулевой длине файла
+                        byte[] buffer = new byte[1024];
+                        try (FileOutputStream fos = new FileOutputStream(file)) {
+                            if (len < 1024) {
+                                int count = is.read(buffer);
+                                fos.write(buffer, 0, count);
+                            } else {
+                                for (long i = 0; i < len / 1024; i++) {
+                                    int count = is.read(buffer);
+                                    fos.write(buffer, 0, count);
+                                }
+                            }
+                        }
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();

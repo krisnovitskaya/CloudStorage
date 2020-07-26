@@ -75,8 +75,28 @@ public class Controller implements Initializable {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-            } else {
-                // TODO: 7/23/2020 upload
+            } else if (op[0].equals("./upload")){
+                File file = new File(clientFilesPath + "/" + op[1]);
+                if(file.exists()) {
+                    System.out.println("upload start");
+                    try {
+                        os.writeUTF(op[0]); //команда
+                        os.writeUTF(op[1]); //имя файла
+                        long len = file.length();
+                        os.writeLong(len);//длина файла
+                        if(len != 0){
+                            FileInputStream fis = new FileInputStream(file);
+                            byte[] buffer = new byte[1024];
+                            while (fis.available() > 0) {
+                                int count = fis.read(buffer);
+                                    os.write(buffer, 0, count);
+                                }
+                            }
+                            System.out.println("upload end");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
     }
 }
