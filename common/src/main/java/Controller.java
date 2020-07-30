@@ -9,6 +9,7 @@ import java.net.Socket;
 import java.net.URL;
 import java.util.ResourceBundle;
 
+
 public class Controller implements Initializable {
     public ListView<String> lv;
     public TextField txt;
@@ -27,76 +28,138 @@ public class Controller implements Initializable {
         } catch (IOException e) {
             e.printStackTrace();
         }
-            File dir = new File(clientFilesPath);
-            for (String file : dir.list()) {
-                lv.getItems().add(file);
-            }
+        File dir = new File(clientFilesPath);
+        for (String file : dir.list()) {
+            lv.getItems().add(file);
+        }
 
     }
-        // ./download fileName
-        // ./upload fileName
-        public void sendCommand(ActionEvent actionEvent) {
-            String command = txt.getText();
-            String [] op = command.split(" ");
-            if (op[0].equals("./download")) {
-                try {
-                    os.writeUTF(op[0]);
-                    os.writeUTF(op[1]);
-                    String response = is.readUTF();
-                    System.out.println("resp: " + response);
-                    if (response.equals("OK")) {
-                        File file = new File(clientFilesPath + "/" + op[1]);
-                        if (!file.exists()) {
-                            file.createNewFile();
-                        }
-                        long len = is.readLong();
-                        if(len != 0) { //клиент зависал при нулевой длине файла
-                            byte[] buffer = new byte[1024];
-                            try (FileOutputStream fos = new FileOutputStream(file)) {
+    // ./download fileName
+    // ./upload fileName
 
-                                if (len < 1024) {
-                                    int count = is.read(buffer);
-                                    fos.write(buffer, 0, count);
-                                } else {
-                                    for (long i = 0; i < len / 1024; i++) {
-                                        int count = is.read(buffer);
-                                        fos.write(buffer, 0, count);
-                                    }
-                                }
-                            }
-                        }
-                        System.out.println("pass");
-                        lv.getItems().clear();
-                        File dir = new File(clientFilesPath);
-                        for (String fil : dir.list()) {
-                            lv.getItems().add(fil);
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            } else if (op[0].equals("./upload")){
-                File file = new File(clientFilesPath + "/" + op[1]);
-                if(file.exists()) {
-                    System.out.println("upload start");
-                    try {
-                        os.writeUTF(op[0]); //команда
-                        os.writeUTF(op[1]); //имя файла
-                        long len = file.length();
-                        os.writeLong(len);//длина файла
-                        if(len != 0){
+    public void sendCommand(ActionEvent actionEvent) {
+        String command = txt.getText();
+        String [] op = command.split(" ");
+        if (op[0].equals("./upload")) {
+            upload(op);
+        } else if (op[0].equals("./download")){
+            download(op);
+        }
+    }
+
+    private void upload(String[] op){
+        File file = new File(clientFilesPath + "/" + op[1]);
+        if (file.exists()) {
+            System.out.println("upload start");
+            try {
+                os.write("#/put".getBytes()); //команда
+                byte[] buf = new byte[128];
+                int count;
+                count = is.read(buf);
+                System.out.println(count);
+
+                if (checkOKcommand(buf)) {
+                    os.write((byte) op[1].length());
+                    os.write(op[1].getBytes());
+                    is.read(buf);
+                    if (checkOKcommand(buf)) {
+                        os.writeLong(file.length());
+                        is.read(buf);
+                        if (checkOKcommand(buf)) {
                             FileInputStream fis = new FileInputStream(file);
                             byte[] buffer = new byte[1024];
                             while (fis.available() > 0) {
-                                int count = fis.read(buffer);
-                                    os.write(buffer, 0, count);
-                                }
+                                int readBytes = fis.read(buffer);
+                                System.out.println(readBytes);
+                                os.write(buffer, 0, readBytes);
                             }
-                            System.out.println("upload end");
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                            fis.close();
+                            System.out.println("wait server answer");
+                            is.read(buf);
+                            if (checkOKcommand(buf)) {
+                                System.out.println("upload done");
+                            } else {
+                                System.out.println("error 4");
+                            }
+                        } else {
+                            System.out.println("error 3");
+                        }
+                    } else {
+                        System.out.println("error 2");
                     }
+                } else {
+                    System.out.println("error 1");
                 }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
+        }
     }
+    private boolean checkOKcommand(byte[] buf){
+        StringBuilder sb = new StringBuilder();
+        sb.append((char) buf[0]);
+        sb.append((char) buf[1]);
+        return sb.toString().equals("OK");
+    }
+    private void download(String[] op){
+        try{
+            os.write("#/get".getBytes()); //команда
+            byte[] buf = new byte[128];
+            int count;
+            count = is.read(buf);
+            System.out.println(count);
+
+            if (checkOKcommand(buf)) { // отправляем длину имени и имя
+                os.write((byte) op[1].length());
+                os.write(op[1].getBytes());
+                StringBuilder sb = new StringBuilder();
+                sb.append((char) is.read());
+                sb.append((char) is.read());
+                if (sb.toString().equals("OK")) {
+                    File file = new File(clientFilesPath + "/" + op[1]);
+                    if(file.exists()){
+                        file.delete();
+                        file.createNewFile();
+                    } else {
+                        file.createNewFile();
+                    }
+                    byte[] bytes = new byte[8];
+                    is.read(bytes);
+                    long fileSize = byte2long(bytes);
+                    os.write("#".getBytes());
+                    FileOutputStream fos = new FileOutputStream(file);
+                    byte[] buffer = new byte[1024];
+                    while (file.length() != fileSize) {
+                        int readBytes = is.read(buffer);
+                        System.out.println(readBytes);
+                        fos.write(buffer, 0, readBytes);
+                    }
+                    System.out.println("file download");
+                    fos.close();
+                } else {
+                    System.out.println("no file on server");
+                }
+            } else {
+                System.out.println("err1");
+            }
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+
+
+    public long byte2long(byte[] b) throws IOException
+    {
+        ByteArrayInputStream baos = new ByteArrayInputStream(b);
+        DataInputStream dos=new DataInputStream(baos);
+        long result=dos.readLong();
+        dos.close();
+        return result;
+    }
+
+
 }
+
+
+
