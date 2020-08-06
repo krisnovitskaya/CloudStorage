@@ -60,7 +60,7 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
                 clientStatus.setCurrentFileName(new String(buf, "UTF-8"));
                 System.out.println(clientStatus.getCurrentFileName());
                 System.out.println("start download");
-                FirstHandler.FileStorageService.sendToClientFile(ctx, clientStatus, futureListener ->{
+                FileStorageService.sendToClientFile(ctx, clientStatus, futureListener ->{
                     if (futureListener.isSuccess()) {
                         System.out.println("file send complete");
                         //ctx.writeAndFlush(bytesOK);
