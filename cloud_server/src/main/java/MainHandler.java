@@ -31,18 +31,6 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
                 System.out.println(clientStatus.getCurrentFileName());
                 Path path = Paths.get(clientServer + "/" + clientStatus.getLogin() + "/" + clientStatus.getCurrentFileName());
                 Files.deleteIfExists(path);
-  //             если запустить TestClient 2 раза подряд, происходит это.  Выходит падает при удалении существующего файла. как лечить?
- //               авг 06, 2020 1:35:14 PM io.netty.channel.DefaultChannelPipeline onUnhandledInboundException
- //               WARNING: An exceptionCaught() event was fired, and it reached at the tail of the pipeline. It usually means the last handler in the pipeline did not handle the exception.
- //               java.nio.file.FileSystemException: .\cloudserver_logins\login1\1.txt: Процесс не может получить доступ к файлу, так как этот файл занят другим процессом.
- //               	at sun.nio.fs.WindowsException.translateToIOException(WindowsException.java:86)
-                //	at sun.nio.fs.WindowsException.rethrowAsIOException(WindowsException.java:97)
-                //	at sun.nio.fs.WindowsException.rethrowAsIOException(WindowsException.java:102)
-                //	at sun.nio.fs.WindowsFileSystemProvider.implDelete(WindowsFileSystemProvider.java:269)
-                //	at sun.nio.fs.AbstractFileSystemProvider.deleteIfExists(AbstractFileSystemProvider.java:108)
-                //	at java.nio.file.Files.deleteIfExists(Files.java:1165)
-                //	at MainHandler.channelRead(MainHandler.java:33)
-                //.. и т.д.
                 long filesize = accumulator.readLong();
                 clientStatus.setCurrentFileSize(filesize);
                 System.out.println("filesize = " + filesize);
@@ -89,12 +77,12 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
             raf.write(bytes);
             if(raf.length() == clientStatus.getCurrentFileSize()){
                 System.out.println("file upload done " + clientStatus.getCurrentFileName());
-                raf.close();
                 clearStatusSetWaitCommand(ctx);
                 ctx.writeAndFlush(bytesOK);
-                return;
             }
-
+            raf.close();
+            System.out.println("rafclose");
+            return;
         }
 //        if(clientStatus.getCurrentAction() == CurrentAction.DOWNLOAD){
 //

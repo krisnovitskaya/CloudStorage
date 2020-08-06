@@ -57,11 +57,10 @@ public class TestClient {
             System.out.println("wrong logpass");
         }
 
-
-        // 1 + 4 + 5 + 8
+        //----------------------------------------------
         out.writeInt(18);
         Thread.sleep(500);
-        Path file = Paths.get("./clientTestdir/3.txt");
+        Path file = Paths.get("./clientTestdir/1.txt");
         out.write(65);                                      //1
         String fileName = file.getFileName().toString();
         System.out.println(fileName);
@@ -72,6 +71,42 @@ public class TestClient {
         out.write(fileName.getBytes("UTF-8"));       //5
         out.writeLong(fileLength);                              //8
         Thread.sleep(500);
+
+
+        if ((char) in.readByte() == '%') {
+            System.out.println("answer server ok");
+            FileInputStream fis = new FileInputStream("./clientTestdir/1.txt");
+            byte[] buffer = new byte[1024 * 5];
+            while (fis.available() > 0) {
+                int readBytes = fis.read(buffer);
+                System.out.println(readBytes);
+                out.write(buffer, 0, readBytes);
+            }
+            fis.close();
+            System.out.println("wait server answer");
+        }
+        if ((char) in.readByte() == '%') {
+            System.out.println("complete");
+
+        }
+
+
+        //----------------------------------------------
+        // 1 + 4 + 5 + 8
+        out.writeInt(18);
+        Thread.sleep(500);
+        Path file5 = Paths.get("./clientTestdir/3.txt");
+        out.write(65);                                      //1
+        String fileName5 = file5.getFileName().toString();
+        System.out.println(fileName5);
+        int fileNameLength5 = fileName5.length();
+        out.writeInt(fileNameLength5);                           //4
+
+        long fileLength5 = Files.size(file5);
+        out.write(fileName5.getBytes("UTF-8"));       //5
+        out.writeLong(fileLength5);                              //8
+        Thread.sleep(500);
+
 
 
         if ((char) in.readByte() == '%') {
@@ -130,6 +165,7 @@ public class TestClient {
 
 
         out.close();
+        in.close();
         socket.close();
     }
 }
