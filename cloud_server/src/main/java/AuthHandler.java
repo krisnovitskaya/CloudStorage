@@ -1,14 +1,13 @@
 import DataBase.DBService;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 public class AuthHandler extends ChannelInboundHandlerAdapter {
-    private final byte[] bytesNo = "*".getBytes();
-    private final byte[] bytesOK = "%".getBytes();
+
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         System.out.println("client connected");
@@ -31,16 +30,17 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
                 System.out.println("auth ok");
             }else{
                 System.out.println("wrong log pass");
-                ctx.pipeline().get(FirstHandler.class).getClientStatus().setCurrentAction(CurrentAction.COMMAND_SIZE);
-                ctx.pipeline().get(FirstHandler.class).setAccumulatorCapacity(ctx,ctx.pipeline().get(FirstHandler.class).COMMAND_ACC_CAPACITY, ctx.pipeline().get(FirstHandler.class).COMMAND_ACC_CAPACITY);
-                ctx.writeAndFlush(bytesNo);
+                restartAuth(ctx);
             }
         }
+
         if (authData[2].equals("&")) {
             if (DBService.addUser(authData[0], authData[1])) {
                 finishAuth(ctx, authData[0]);
                 //добавить проверку и обработку уникальности логина
-
+                //контроль уже залогиненных пользователей
+            }else {
+                restartAuth(ctx);
             }
         }
     }
@@ -50,10 +50,21 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
         ctx.pipeline().get(FirstHandler.class).getClientStatus().setLogin(login);
         ctx.pipeline().addLast(new MainHandler(ctx.pipeline().get(FirstHandler.class).getClientStatus()));
         ctx.pipeline().get(FirstHandler.class).setAccumulatorCapacity(ctx,ctx.pipeline().get(FirstHandler.class).COMMAND_ACC_CAPACITY, ctx.pipeline().get(FirstHandler.class).COMMAND_ACC_CAPACITY);
-        ctx.writeAndFlush(bytesOK);
+        sendCommand(ctx, Command.commandOK);
         ctx.pipeline().remove(this);
     }
+    private void restartAuth(ChannelHandlerContext ctx){
+        ctx.pipeline().get(FirstHandler.class).getClientStatus().setCurrentAction(CurrentAction.COMMAND_SIZE);
+        ctx.pipeline().get(FirstHandler.class).setAccumulatorCapacity(ctx,ctx.pipeline().get(FirstHandler.class).COMMAND_ACC_CAPACITY, ctx.pipeline().get(FirstHandler.class).COMMAND_ACC_CAPACITY);
+        sendCommand(ctx, Command.commandNO);
+    }
 
+    private void sendCommand(ChannelHandlerContext ctx, byte command) {
+        ByteBuf buf = null;
+        buf = ByteBufAllocator.DEFAULT.directBuffer(1);
+        buf.writeByte(command);
+        ctx.writeAndFlush(buf);
+    }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {

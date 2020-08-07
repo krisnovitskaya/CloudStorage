@@ -17,7 +17,7 @@ public class ServerApp {
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
-                            ch.pipeline().addLast(new OutBytesToByteBufHandler(), new FirstHandler(),new AuthHandler());
+                            ch.pipeline().addLast(new FirstHandler(),new AuthHandler());
                         }
                     });
             ChannelFuture future = serverBootstrap.bind(8189).sync();

@@ -19,7 +19,11 @@ public class TestClient {
         out.write(logpas.getBytes("UTF-8"));
         System.out.println("send logpas");
         Thread.sleep(500);
-        if((char)in.readByte() == '%') {
+        //(char)in.readByte() == '%'
+        //System.out.println(in.readByte());
+
+
+        if(in.readByte() == Command.commandOK) {
 
             // 1 + 4 + 5 + 8
             out.writeInt(18);
@@ -37,10 +41,10 @@ public class TestClient {
             Thread.sleep(500);
 
 
-            if ((char) in.readByte() == '%') {
+            if (in.readByte() == Command.commandOK) {
                 System.out.println("answer server ok");
                 FileInputStream fis = new FileInputStream("./clientTestdir/1.txt");
-                byte[] buffer = new byte[1024 * 5];
+                byte[] buffer = new byte[1024 * 5 * 100];
                 while (fis.available() > 0) {
                     int readBytes = fis.read(buffer);
                     System.out.println(readBytes);
@@ -73,10 +77,10 @@ public class TestClient {
         Thread.sleep(500);
 
 
-        if ((char) in.readByte() == '%') {
+        if (in.readByte() == Command.commandOK) {
             System.out.println("answer server ok");
             FileInputStream fis = new FileInputStream("./clientTestdir/1.txt");
-            byte[] buffer = new byte[1024 * 5];
+            byte[] buffer = new byte[1024 * 5 * 100];
             while (fis.available() > 0) {
                 int readBytes = fis.read(buffer);
                 System.out.println(readBytes);
@@ -109,7 +113,7 @@ public class TestClient {
 
 
 
-        if ((char) in.readByte() == '%') {
+        if (in.readByte() == Command.commandOK) {
             System.out.println("answer server ok");
             FileInputStream fis = new FileInputStream("./clientTestdir/3.txt");
             byte[] buffer = new byte[1024 * 5];

@@ -1,14 +1,15 @@
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class MainHandler extends ChannelInboundHandlerAdapter {
     private ClientStatus clientStatus;
-    private final byte[] bytesOK = "%".getBytes();
     private final String clientServer = "./cloudserver_logins";
 
 
@@ -21,13 +22,13 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
         ByteBuf accumulator = (ByteBuf) msg;
         if(clientStatus.getCurrentAction() == CurrentAction.WAIT){
             byte signalByte = accumulator.readByte();
-            if(signalByte == (byte) 65){                        //65 == upload
+            if(signalByte == Command.upload){
                 clientStatus.setCurrentAction(CurrentAction.UPLOAD);
                 int filenamesize = accumulator.readInt();
                 System.out.println("filenamesize = " + filenamesize);
                 byte[] buf = new byte[filenamesize];
                 accumulator.readBytes(buf);
-                clientStatus.setCurrentFileName(new String(buf, "UTF-8"));
+                clientStatus.setCurrentFileName(new String(buf, StandardCharsets.UTF_8));
                 System.out.println(clientStatus.getCurrentFileName());
                 Path path = Paths.get(clientServer + "/" + clientStatus.getLogin() + "/" + clientStatus.getCurrentFileName());
                 Files.deleteIfExists(path);
@@ -36,22 +37,20 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
                 System.out.println("filesize = " + filesize);
                 accumulator.clear();
                 ctx.pipeline().get(FirstHandler.class).setAccumulatorCapacity(ctx,1024, 5 * 1024 * 1024);
-                ctx.writeAndFlush(bytesOK);
+                sendCommand(ctx, Command.commandOK);
             }
-            if(signalByte == (byte) 66){
+            if(signalByte == Command.download){
                 clientStatus.setCurrentAction(CurrentAction.DOWNLOAD);
-                //TODO download
                 int filenamesize = accumulator.readInt();
                 System.out.println("filenamesize = " + filenamesize);
                 byte[] buf = new byte[filenamesize];
                 accumulator.readBytes(buf);
-                clientStatus.setCurrentFileName(new String(buf, "UTF-8"));
+                clientStatus.setCurrentFileName(new String(buf, StandardCharsets.UTF_8));
                 System.out.println(clientStatus.getCurrentFileName());
                 System.out.println("start download");
                 FileStorageService.sendToClientFile(ctx, clientStatus, futureListener ->{
                     if (futureListener.isSuccess()) {
                         System.out.println("file send complete");
-                        //ctx.writeAndFlush(bytesOK);
                     } else {
                         futureListener.cause().printStackTrace();
                         System.out.println("download error");
@@ -59,9 +58,9 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
                 });
                 clearStatusSetWaitCommand(ctx);
             }
-            if(signalByte == (byte) 67){
+            if(signalByte == Command.storage_INFO){
                 clientStatus.setCurrentAction(CurrentAction.STORAGE_INFO);
-                //TODO info
+
                 //надо передавать и список файл и их размеры. в каком виде это лучше сделать?
                 //предполагается, что при авторизации запрашивается корректный список хранимого,
                 // чтобы не делать при download лишних проверок(файл точно есть и его размер известен клиенту)
@@ -78,10 +77,9 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
             if(raf.length() == clientStatus.getCurrentFileSize()){
                 System.out.println("file upload done " + clientStatus.getCurrentFileName());
                 clearStatusSetWaitCommand(ctx);
-                ctx.writeAndFlush(bytesOK);
+                sendCommand(ctx, Command.commandOK);
             }
             raf.close();
-            System.out.println("rafclose");
             return;
         }
 //        if(clientStatus.getCurrentAction() == CurrentAction.DOWNLOAD){
@@ -96,5 +94,11 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
         clientStatus.setCurrentFileName(null);
         clientStatus.setCurrentAction(CurrentAction.COMMAND_SIZE);
         ctx.pipeline().get(FirstHandler.class).setAccumulatorCapacity(ctx,ctx.pipeline().get(FirstHandler.class).COMMAND_ACC_CAPACITY, ctx.pipeline().get(FirstHandler.class).COMMAND_ACC_CAPACITY);
+    }
+    private void sendCommand(ChannelHandlerContext ctx, byte command) {
+        ByteBuf buf = null;
+        buf = ByteBufAllocator.DEFAULT.directBuffer(1);
+        buf.writeByte(command);
+        ctx.writeAndFlush(buf);
     }
 }
