@@ -2,15 +2,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.*;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
 public class FirstHandler extends ChannelInboundHandlerAdapter {
     private ClientStatus clientStatus;
     private ByteBuf accumulator;
     public final int COMMAND_ACC_CAPACITY = 4;
+    private final String clientServer = "./cloudserver_logins";
+    private Callback callback;
+
+    private byte[] bytes = new byte[5*1024*1024];
+
 
     public FirstHandler(){
         clientStatus = new ClientStatus();
@@ -32,7 +32,11 @@ public class FirstHandler extends ChannelInboundHandlerAdapter {
         accumulator.writeBytes(inBuf);
         inBuf.release();
         if(clientStatus.getCurrentAction() == CurrentAction.UPLOAD){
-            ctx.fireChannelRead(accumulator);
+            FileStorageService.uploadFile(ctx, clientStatus, accumulator, bytes,  callback = () -> {
+                System.out.println("file upload done " + clientStatus.getCurrentFileName());
+                clearStatusSetWaitCommand(ctx);
+                sendCommand(ctx, Command.commandOK);
+            });
             return;
         }
         if (accumulator.readableBytes() == accumulator.capacity() && clientStatus.getCurrentAction() != CurrentAction.COMMAND_SIZE)
@@ -62,5 +66,16 @@ public class FirstHandler extends ChannelInboundHandlerAdapter {
         ctx.close();
     }
 
-
+    void clearStatusSetWaitCommand(ChannelHandlerContext ctx){
+        clientStatus.setCurrentFileSize(-1);
+        clientStatus.setCurrentFileName(null);
+        clientStatus.setCurrentAction(CurrentAction.COMMAND_SIZE);
+        setAccumulatorCapacity(ctx, COMMAND_ACC_CAPACITY, COMMAND_ACC_CAPACITY);
+    }
+    void sendCommand(ChannelHandlerContext ctx, byte command) {
+        ByteBuf buf = null;
+        buf = ByteBufAllocator.DEFAULT.directBuffer(1);
+        buf.writeByte(command);
+        ctx.writeAndFlush(buf);
+    }
 }

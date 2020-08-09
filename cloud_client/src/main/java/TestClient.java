@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -14,7 +15,7 @@ public class TestClient {
         DataInputStream in = new DataInputStream(socket.getInputStream());
         String logpas = "login1 pass1 #";
         System.out.println("logpas length in bytes" + logpas.getBytes("UTF-8").length);
-        out.writeInt(logpas.getBytes("UTF-8").length);
+        out.writeInt(logpas.getBytes(StandardCharsets.UTF_8).length);
         Thread.sleep(500);
         out.write(logpas.getBytes("UTF-8"));
         System.out.println("send logpas");
@@ -47,7 +48,7 @@ public class TestClient {
                 byte[] buffer = new byte[1024 * 5 * 100];
                 while (fis.available() > 0) {
                     int readBytes = fis.read(buffer);
-                    System.out.println(readBytes);
+                    //System.out.println(readBytes);
                     out.write(buffer, 0, readBytes);
                 }
                 fis.close();
@@ -162,10 +163,54 @@ public class TestClient {
             int readBytes = in.read(buffer);
             System.out.println(readBytes);
             fos.write(buffer, 0, readBytes);
-            System.out.println(filedownload.length());
+            //System.out.println(filedownload.length());
         }
         System.out.println("file download");
         fos.close();
+
+
+        System.out.println("test storage info");
+        out.writeInt(1);
+        Thread.sleep(100);
+        out.writeByte(Command.storage_INFO);
+        int size = in.readInt();
+        byte[] byteInfo = new byte[size];
+
+        in.read(byteInfo);
+
+        System.out.println(new String(byteInfo, StandardCharsets.UTF_8));
+
+
+//        System.out.println("TEst Delete");
+//
+//                out.writeInt(10);       //длина команды    1 + 4 + 5
+//        Thread.sleep(500);
+//        Path file2 = Paths.get("./cloudserver_logins/login1/3.txt");
+//        out.writeByte(Command.delete_FILE);                                      //1
+//        String fileName2 = file2.getFileName().toString();
+//        System.out.println(file2.toAbsolutePath().toString());
+//        int fileNameLength2 = fileName2.length();
+//        out.writeInt(fileNameLength2);                           //4
+//        out.write(fileName2.getBytes(StandardCharsets.UTF_8));
+
+
+
+
+
+
+
+
+
+        System.out.println("test storage info");
+        out.writeInt(1);
+        Thread.sleep(100);
+        out.writeByte(Command.storage_INFO);
+        size = in.readInt();
+        byte[] byteInf = new byte[size];
+
+        in.read(byteInf);
+
+        System.out.println(new String(byteInfo, StandardCharsets.UTF_8));
 
 
         out.close();

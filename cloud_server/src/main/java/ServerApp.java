@@ -21,6 +21,7 @@ public class ServerApp {
                         }
                     });
             ChannelFuture future = serverBootstrap.bind(8189).sync();
+            System.out.println("storage server up");
             future.channel().closeFuture().sync();
         } finally {
             workerGroup.shutdownGracefully();

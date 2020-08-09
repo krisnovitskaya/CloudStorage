@@ -2,7 +2,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,7 +9,9 @@ import java.nio.file.Paths;
 
 public class MainHandler extends ChannelInboundHandlerAdapter {
     private ClientStatus clientStatus;
-    private final String clientServer = "./cloudserver_logins";
+    private final String clientServer = "cloudserver_logins";
+    private byte[] buf = new byte[256];
+    private Callback callback;
 
 
     public MainHandler(ClientStatus clientStatus){
@@ -20,15 +21,16 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         ByteBuf accumulator = (ByteBuf) msg;
-        if(clientStatus.getCurrentAction() == CurrentAction.WAIT){
+        //if(clientStatus.getCurrentAction() == CurrentAction.WAIT){
             byte signalByte = accumulator.readByte();
             if(signalByte == Command.upload){
                 clientStatus.setCurrentAction(CurrentAction.UPLOAD);
                 int filenamesize = accumulator.readInt();
                 System.out.println("filenamesize = " + filenamesize);
-                byte[] buf = new byte[filenamesize];
-                accumulator.readBytes(buf);
-                clientStatus.setCurrentFileName(new String(buf, StandardCharsets.UTF_8));
+                int readableBytes = accumulator.readableBytes();
+                System.out.println("readablebytes" + readableBytes);
+                accumulator.readBytes(buf, 0, filenamesize);
+                clientStatus.setCurrentFileName(new String(buf, 0, filenamesize , StandardCharsets.UTF_8));
                 System.out.println(clientStatus.getCurrentFileName());
                 Path path = Paths.get(clientServer + "/" + clientStatus.getLogin() + "/" + clientStatus.getCurrentFileName());
                 Files.deleteIfExists(path);
@@ -38,14 +40,14 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
                 accumulator.clear();
                 ctx.pipeline().get(FirstHandler.class).setAccumulatorCapacity(ctx,1024, 5 * 1024 * 1024);
                 sendCommand(ctx, Command.commandOK);
+                return;
             }
             if(signalByte == Command.download){
                 clientStatus.setCurrentAction(CurrentAction.DOWNLOAD);
                 int filenamesize = accumulator.readInt();
                 System.out.println("filenamesize = " + filenamesize);
-                byte[] buf = new byte[filenamesize];
-                accumulator.readBytes(buf);
-                clientStatus.setCurrentFileName(new String(buf, StandardCharsets.UTF_8));
+                accumulator.readBytes(buf, 0, filenamesize);
+                clientStatus.setCurrentFileName(new String(buf, 0, filenamesize, StandardCharsets.UTF_8));
                 System.out.println(clientStatus.getCurrentFileName());
                 System.out.println("start download");
                 FileStorageService.sendToClientFile(ctx, clientStatus, futureListener ->{
@@ -57,38 +59,46 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
                     }
                 });
                 clearStatusSetWaitCommand(ctx);
+                return;
             }
-            if(signalByte == Command.storage_INFO){
-                clientStatus.setCurrentAction(CurrentAction.STORAGE_INFO);
 
-                //надо передавать и список файл и их размеры. в каком виде это лучше сделать?
-                //предполагается, что при авторизации запрашивается корректный список хранимого,
-                // чтобы не делать при download лишних проверок(файл точно есть и его размер известен клиенту)
+            if(signalByte == Command.storage_INFO){
+                //clientStatus.setCurrentAction(CurrentAction.STORAGE_INFO);
+                FileStorageService.sendStorageInfo(ctx, clientStatus, callback = new Callback() {
+                    @Override
+                    public void callback() {
+                        System.out.println("storage info send");
+                        clearStatusSetWaitCommand(ctx);
+                    }
+                } );
+                return;
             }
-            return;
-        }
-        if(clientStatus.getCurrentAction() == CurrentAction.UPLOAD){
-            RandomAccessFile raf = new RandomAccessFile(clientServer + "/" + clientStatus.getLogin() + "/" + clientStatus.getCurrentFileName(), "rw");
-            raf.seek(raf.length());
-            byte[] bytes = new byte[accumulator.readableBytes()];
-            accumulator.readBytes(bytes);
+
+        if(signalByte == Command.delete_FILE){
+            //clientStatus.setCurrentAction(CurrentAction.STORAGE_INFO);
+            int filenamesize = accumulator.readInt();
+            System.out.println("filenamesize = " + filenamesize);
+            int readableBytes = accumulator.readableBytes();
+            System.out.println("readablebytes" + readableBytes);
+            accumulator.readBytes(buf, 0, filenamesize);
             accumulator.clear();
-            raf.write(bytes);
-            if(raf.length() == clientStatus.getCurrentFileSize()){
-                System.out.println("file upload done " + clientStatus.getCurrentFileName());
-                clearStatusSetWaitCommand(ctx);
-                sendCommand(ctx, Command.commandOK);
-            }
-            raf.close();
+            clientStatus.setCurrentFileName(new String(buf, 0, filenamesize , StandardCharsets.UTF_8));
+            System.out.println(clientStatus.getCurrentFileName());
+            System.out.println(clientStatus.getCurrentFileName());
+            FileStorageService.deleteFile(clientStatus, callback = new Callback() {
+                @Override
+                public void callback() {
+                    System.out.println("file deleted");
+                    clearStatusSetWaitCommand(ctx);
+                }
+            } );
             return;
         }
-//        if(clientStatus.getCurrentAction() == CurrentAction.DOWNLOAD){
-//
-//        }
-        if(clientStatus.getCurrentAction() == CurrentAction.STORAGE_INFO){
-            //TODO info
-        }
+
+
     }
+
+
     private void clearStatusSetWaitCommand(ChannelHandlerContext ctx){
         clientStatus.setCurrentFileSize(-1);
         clientStatus.setCurrentFileName(null);
