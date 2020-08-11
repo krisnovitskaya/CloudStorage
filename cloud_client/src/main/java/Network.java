@@ -1,16 +1,7 @@
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-
 import java.io.*;
-import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 
 public class Network {
@@ -44,16 +35,19 @@ public class Network {
         }
     }
 
-    public void sendAuth() throws IOException, InterruptedException {
+    public void sendAuth(String authData, BoolCallback callback) throws IOException{
 
         //тест
-        String logpas = "login1 pass1 #";
-        System.out.println("logpas length in bytes" + logpas.getBytes("UTF-8").length);
-        out.writeInt(logpas.getBytes(StandardCharsets.UTF_8).length);
-        Thread.sleep(500);
-        out.write(logpas.getBytes("UTF-8"));
-        System.out.println("send logpas");
-        Thread.sleep(500);
+        //String logpas = "login1 pass1 #";
+        System.out.println("logpas length in bytes" + authData.getBytes("UTF-8").length);
+        out.writeInt(authData.getBytes(StandardCharsets.UTF_8).length);
+        if (in.readByte() == Command.commandOK) {
+            out.write(authData.getBytes("UTF-8"));
+            System.out.println("send logpas");
+            callback.callback(in.readByte() == Command.commandOK);
+        } else {
+            System.err.println("ошибка ответа сервера");
+        }
     }
 
     public void closeConnection(){
@@ -64,5 +58,53 @@ public class Network {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+    public String askStorageInfo(){
+
+        String storageInfo;
+        byte[] byteInfo;
+        try{
+            out.writeInt(1);
+            if (in.readByte() == Command.commandOK) {
+                out.writeByte(Command.storage_INFO);
+                int size = in.readInt();
+                byteInfo = new byte[size];
+                in.read(byteInfo);
+                storageInfo = new String(byteInfo, StandardCharsets.UTF_8);
+                System.out.println(storageInfo);
+                return storageInfo;
+            } else {
+                System.err.println("ошибка ответа сервера");
+                return new String(); //заглушка
+            }
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+        return new String(); //заглушка
+    }
+
+    public void uploadFIle(String path, String selectedFilename, long selectedFileSize, BoolCallback boolCallback) {
+        int commandSize = Byte.BYTES + Integer.BYTES + selectedFilename.getBytes(StandardCharsets.UTF_8).length + Long.BYTES;
+        try {
+            out.writeInt(commandSize);
+            System.out.println(in.readByte()); //okbyte
+            out.writeByte(Command.upload);
+            out.writeInt(selectedFilename.getBytes(StandardCharsets.UTF_8).length);
+            out.write(selectedFilename.getBytes(StandardCharsets.UTF_8));
+            out.writeLong(selectedFileSize);
+            System.out.println(in.readByte()); //okbyte
+            FileInputStream fis = new FileInputStream(path + "/" + selectedFilename);
+            byte[] buffer = new byte[1024 * 5 * 1024];
+            while (fis.available() > 0) {
+                int readBytes = fis.read(buffer);
+                System.out.println(readBytes);
+                out.write(buffer, 0, readBytes);
+            }
+            fis.close();
+            boolCallback.callback(in.readByte() == Command.commandOK);
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+
     }
 }

@@ -43,4 +43,10 @@ public class StorageFileInfo {
                 this.type = FileType.DIRECTORY;
             }
     }
+
+    public void print(){
+        System.out.println(this.getType());
+        System.out.println(this.getFilename());
+        System.out.println(this.getSize());
+    }
 }

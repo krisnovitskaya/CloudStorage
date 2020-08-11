@@ -9,7 +9,7 @@ public class FirstHandler extends ChannelInboundHandlerAdapter {
     private final String clientServer = "./cloudserver_logins";
     private Callback callback;
 
-    private byte[] bytes = new byte[5*1024*1024];
+    private byte[] bytes = new byte[10*1024*1024];
 
 
     public FirstHandler(){
@@ -32,6 +32,11 @@ public class FirstHandler extends ChannelInboundHandlerAdapter {
         accumulator.writeBytes(inBuf);
         inBuf.release();
         if(clientStatus.getCurrentAction() == CurrentAction.UPLOAD){
+
+            //при закачке 35Гб файла, да и вообще любого свыше мегабайта. упираюсь в ограничение максимального пакета TCP/IP 65536,
+            //то есть FileStorageService.uploadFile вызывается на каждый макс пакет 65536, хотя accumulator может растягиваться до 10МБ
+            // как будет эффективней, оставить как есть, или попытаться копить в аккумуляторе до 8-10МБ и только потом вызывать FileStorageService.uploadFile ???
+            // позволит ли это увеличить скорость закачки?
             FileStorageService.uploadFile(ctx, clientStatus, accumulator, bytes,  callback = () -> {
                 System.out.println("file upload done " + clientStatus.getCurrentFileName());
                 clearStatusSetWaitCommand(ctx);
@@ -48,6 +53,8 @@ public class FirstHandler extends ChannelInboundHandlerAdapter {
             if(clientStatus.getCurrentAction() == CurrentAction.COMMAND_SIZE ){clientStatus.setCurrentAction(CurrentAction.WAIT);}
             int cap = accumulator.readInt();
             setAccumulatorCapacity(ctx, cap, cap);
+            //добавлено
+            sendCommand(ctx,Command.commandOK);
         }
     }
 

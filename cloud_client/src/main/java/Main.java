@@ -12,7 +12,7 @@ public class Main extends Application {
         Controller controller = fxmlLoader.getController();
         primaryStage.setOnCloseRequest(event -> controller.exitAction());
         primaryStage.setTitle("Cloud Storage by Kris");
-        primaryStage.setScene(new Scene(root, 1280, 600));
+        primaryStage.setScene(new Scene(root, 900, 600));
         primaryStage.show();
     }
 

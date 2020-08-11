@@ -31,7 +31,8 @@ public class FileStorageService {
             accumulator.readBytes(bytes, 0, readableBytes);
             accumulator.clear();
             raf.write(bytes, 0, readableBytes);
-
+            System.out.println("write readable " + readableBytes);
+            System.out.println(raf.length());
             if (raf.length() == clientStatus.getCurrentFileSize()) {
                 callback.callback();
             }

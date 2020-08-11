@@ -8,7 +8,6 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 
 import java.io.IOException;
 import java.net.URL;
@@ -16,16 +15,27 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
 public class Controller implements Initializable {
-
     private Network network = Network.getInstance();
+    private List<StorageFileInfo> listStorage = new ArrayList<>();
+
 
     @FXML
-    TableView storageFilesTable;
+    Button uploadBtn;
+    @FXML
+    Button downloadBtn;
+    @FXML
+    Button deleteBtn;
+
+
+    @FXML
+    TableView<StorageFileInfo> storageFilesTable;
     @FXML
     TextField loginField;
     @FXML
@@ -112,18 +122,18 @@ public class Controller implements Initializable {
         updateList(Paths.get("."));
 
         //настройка серверной таблицы
-        TableColumn<FileInfo, String> storage_fileTypeColumn = new TableColumn<>();
-        fileTypeColumn.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getType().getName()));
-        fileTypeColumn.setPrefWidth(24);
+        TableColumn<StorageFileInfo, String> storage_fileTypeColumn = new TableColumn<>();
+        storage_fileTypeColumn.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getType().getName()));
+        storage_fileTypeColumn.setPrefWidth(24);
 
-        TableColumn<FileInfo, String> storage_filenameColumn = new TableColumn<>("Имя");
-        filenameColumn.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getFilename()));
-        filenameColumn.setPrefWidth(240);
+        TableColumn<StorageFileInfo, String> storage_filenameColumn = new TableColumn<>("Имя");
+        storage_filenameColumn.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getFilename()));
+        storage_filenameColumn.setPrefWidth(240);
 
-        TableColumn<FileInfo, Long> storage_fileSizeColumn = new TableColumn<>("Размер");
-        fileSizeColumn.setCellValueFactory(param -> new SimpleObjectProperty<>(param.getValue().getSize()));
-        fileSizeColumn.setCellFactory(column -> {
-            return new TableCell<FileInfo, Long>() {
+        TableColumn<StorageFileInfo, Long> storage_fileSizeColumn = new TableColumn<>("Размер");
+        storage_fileSizeColumn.setCellValueFactory(param -> new SimpleObjectProperty<>(param.getValue().getSize()));
+        storage_fileSizeColumn.setCellFactory(column -> {
+            return new TableCell<StorageFileInfo, Long>() {
                 @Override
                 protected void updateItem(Long item, boolean empty) {
                     super.updateItem(item, empty);
@@ -140,11 +150,11 @@ public class Controller implements Initializable {
                 }
             };
         });
-        fileSizeColumn.setPrefWidth(120);
+        storage_fileSizeColumn.setPrefWidth(120);
 
 
         storageFilesTable.getColumns().addAll(storage_fileTypeColumn, storage_filenameColumn, storage_fileSizeColumn);
-        filesTable.getSortOrder().add(storage_fileTypeColumn);
+        storageFilesTable.getSortOrder().add(storage_fileTypeColumn);
     }
 
     public void updateList(Path path) {
@@ -189,15 +199,50 @@ public class Controller implements Initializable {
     }
 
     public void tryAuth(ActionEvent actionEvent) {
+        if(loginField.getText() == null || loginField.getText() == "\\s+" || passField.getText() == null || passField.getText() == "\\s+") return;
+        StringBuilder sb = new StringBuilder();
+        sb.append(loginField.getText().trim() + " " + passField.getText().trim());
+        if(regField.isSelected()){
+            sb.append(" &");
+        } else {
+            sb.append(" #");
+        }
+
         try {
-            network.sendAuth();
+            network.sendAuth(sb.toString(), new BoolCallback() {
+                @Override
+                public void callback(boolean getAuth) {
+                    if(getAuth){
+                        auth.setVisible(false);
+                        makeList(network.askStorageInfo());
+                        updateStorageList();
+                    } else {
+                        new Alert(Alert.AlertType.INFORMATION, "Неправильные данные", ButtonType.APPLY).showAndWait();
+                    }
+                }
+            });
         } catch (IOException e) {
             e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         }
-        auth.setVisible(false);
+
     }
+
+    private void makeList(String info) {
+        listStorage.clear();
+        String[] infoList = info.split(" ");
+        for(int i = 0; i < infoList.length; i += 2){
+            listStorage.add(new StorageFileInfo(infoList[i], Long.parseLong(infoList[i + 1])));
+        }
+    }
+    public void updateStorageList() {
+        storageFilesTable.getItems().clear();
+        storageFilesTable.getItems().addAll(listStorage);
+        for (StorageFileInfo storageFileInfo : listStorage) {
+            storageFileInfo.print();
+        }
+        storageFilesTable.sort();
+    }
+
 
     public void btnExitAction(ActionEvent actionEvent) {
         exitAction();
@@ -206,5 +251,33 @@ public class Controller implements Initializable {
     public void exitAction() {
         network.closeConnection();
         Platform.exit();
+    }
+
+//    public void btnDownload(ActionEvent actionEvent) {
+//        
+//    }
+
+    public void btnUpload(ActionEvent actionEvent) {
+        hideButtons();
+        network.uploadFIle(getCurrentPath(), getSelectedFilename(), getSelectedFileSize(), new BoolCallback() {
+            @Override
+            public void callback(boolean bool) {
+                if(bool) new Alert(Alert.AlertType.INFORMATION, "Файл успешно загружен в облако", ButtonType.APPLY).showAndWait();
+                makeList(network.askStorageInfo());
+                updateStorageList();
+                showButtons();
+            }
+        });
+    }
+
+    private void showButtons(){
+        uploadBtn.setVisible(true);
+        downloadBtn.setVisible(true);
+        deleteBtn.setVisible(true);
+    }
+    private void hideButtons(){
+        uploadBtn.setVisible(false);
+        downloadBtn.setVisible(false);
+        deleteBtn.setVisible(false);
     }
 }
