@@ -1,6 +1,7 @@
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.*;
+import server.Callback;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -15,8 +16,11 @@ public class FileStorageService {
 
 
 
+
     public static void sendToClientFile(ChannelHandlerContext ctx, ClientStatus clientStatus, ChannelFutureListener finishListener) throws IOException {
+
         Path path = Paths.get(clientServer + "/" + clientStatus.getLogin() + "/" + clientStatus.getCurrentFileName());
+        System.out.println(path.toString());
         FileRegion region = new DefaultFileRegion(path.toFile(), 0, Files.size(path));
         ChannelFuture future = ctx.channel().writeAndFlush(region);
         if (finishListener != null) {
@@ -42,21 +46,25 @@ public class FileStorageService {
     public static void sendStorageInfo(ChannelHandlerContext ctx, ClientStatus clientStatus, Callback callback) throws IOException {
         String directoryList = Files.list(Paths.get(clientServer + "/" + clientStatus.getLogin()))
                 .filter(p -> Files.isDirectory(p))
-                .map(p -> p.getFileName() + " -1" )
-                .collect(Collectors.joining(" "));
+                .map(p -> p.getFileName() + ":-1" )
+                .collect(Collectors.joining(":"));
 
         String filesList = Files.list(Paths.get(clientServer + "/" + clientStatus.getLogin()))
                 .filter(p -> !Files.isDirectory(p))
                 .map(Path::toFile)
-                .map(file -> file.getName() + " " + file.length() )
-                .collect(Collectors.joining(" "));
+                .map(file -> file.getName() + ":" + file.length() )
+                .collect(Collectors.joining(":"));
 
 
-        String storage_info = (directoryList + " " + filesList).trim();
+        StringBuilder sb_storage_info = new StringBuilder();
+        sb_storage_info.append(clientStatus.getLogin());
+        if (directoryList.length() > 0) sb_storage_info.append(":" + directoryList);
+        if (filesList.length() > 0) sb_storage_info.append(":" + filesList);
+
         ByteBuf buf = null;
-        buf = ByteBufAllocator.DEFAULT.directBuffer(4 + storage_info.getBytes(StandardCharsets.UTF_8).length);
-        buf.writeInt(storage_info.getBytes(StandardCharsets.UTF_8).length);
-        buf.writeBytes(storage_info.getBytes(StandardCharsets.UTF_8));
+        buf = ByteBufAllocator.DEFAULT.directBuffer(4 + sb_storage_info.toString().getBytes(StandardCharsets.UTF_8).length);
+        buf.writeInt(sb_storage_info.toString().getBytes(StandardCharsets.UTF_8).length);
+        buf.writeBytes(sb_storage_info.toString().getBytes(StandardCharsets.UTF_8));
         ctx.writeAndFlush(buf);
         callback.callback();
     }

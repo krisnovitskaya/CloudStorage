@@ -44,10 +44,10 @@
 
     <HBox spacing="5">
         <Button fx:id="uploadBtn" focusTraversable="false" maxWidth="Infinity" text="Загрузить файл" HBox.hgrow="ALWAYS" onAction="#btnUpload"/>
-        <Button fx:id="downloadBtn" focusTraversable="false" maxWidth="Infinity" text="Скачать файл" HBox.hgrow="ALWAYS" />
-        <Button fx:id="deleteBtn" focusTraversable="false" maxWidth="Infinity" text="Удалить файл" HBox.hgrow="ALWAYS" />
-         <padding>
-             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-         </padding>
-     </HBox>
- </VBox>
+        <Button fx:id="downloadBtn" focusTraversable="false" maxWidth="Infinity" text="Скачать файл" HBox.hgrow="ALWAYS" onAction="#btnDownload" />
+        <Button fx:id="deleteBtn" focusTraversable="false" maxWidth="Infinity" text="Удалить файл" HBox.hgrow="ALWAYS" onAction="#btnDelete"/>
+        <padding>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+        </padding>
+    </HBox>
+</VBox>

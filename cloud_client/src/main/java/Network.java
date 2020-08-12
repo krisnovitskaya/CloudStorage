@@ -1,8 +1,10 @@
+import client.BoolCallback;
+
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
+
 
 public class Network {
 
@@ -36,10 +38,6 @@ public class Network {
     }
 
     public void sendAuth(String authData, BoolCallback callback) throws IOException{
-
-        //тест
-        //String logpas = "login1 pass1 #";
-        System.out.println("logpas length in bytes" + authData.getBytes("UTF-8").length);
         out.writeInt(authData.getBytes(StandardCharsets.UTF_8).length);
         if (in.readByte() == Command.commandOK) {
             out.write(authData.getBytes("UTF-8"));
@@ -71,7 +69,6 @@ public class Network {
                 byteInfo = new byte[size];
                 in.read(byteInfo);
                 storageInfo = new String(byteInfo, StandardCharsets.UTF_8);
-                System.out.println(storageInfo);
                 return storageInfo;
             } else {
                 System.err.println("ошибка ответа сервера");
@@ -105,6 +102,56 @@ public class Network {
         }catch (IOException e){
             e.printStackTrace();
         }
+
+    }
+
+    public void downloadFile(String path, String filename, long fileSize, BoolCallback callback) {
+        try {
+            int commandSize = Byte.BYTES + Integer.BYTES + filename.getBytes(StandardCharsets.UTF_8).length;
+            out.writeInt(commandSize);
+            if(in.readByte() == Command.commandOK) System.out.println("ok");// dodelat
+            out.writeByte(Command.download);
+            out.writeInt(filename.getBytes(StandardCharsets.UTF_8).length);
+            out.write(filename.getBytes(StandardCharsets.UTF_8));
+            File file = new File(path + "/" + filename);
+            System.out.println();
+            if (file.exists()) {
+                file.delete();
+                file.createNewFile();
+            } else {
+                file.createNewFile();
+            }
+
+            FileOutputStream fos = new FileOutputStream(file, true);
+            byte[] buffer = new byte[1024 * 1024];
+            while (file.length() != fileSize) {
+                int readBytes = in.read(buffer);
+                System.out.println(readBytes);
+                fos.write(buffer, 0, readBytes);
+            }
+            System.out.println("file download");
+            fos.close();
+            callback.callback(true);
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public void deleteFile(String filename, BoolCallback callback) {
+        try {
+            int commandSize = Byte.BYTES + Integer.BYTES + filename.getBytes(StandardCharsets.UTF_8).length;
+            out.writeInt(commandSize);
+            if (in.readByte() == Command.commandOK) System.out.println("ok");// dodelat
+            out.writeByte(Command.delete_FILE);
+            out.writeInt(filename.getBytes(StandardCharsets.UTF_8).length);
+            out.write(filename.getBytes(StandardCharsets.UTF_8));
+            if (in.readByte() == Command.commandOK){
+                callback.callback(true);
+            }else {callback.callback(false);}
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+
 
     }
 }

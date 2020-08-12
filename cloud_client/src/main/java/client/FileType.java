@@ -1,3 +1,5 @@
+package client;
+
 public enum FileType {
     FILE("F"), DIRECTORY("D");
 

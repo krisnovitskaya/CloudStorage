@@ -1,3 +1,6 @@
+import client.BoolCallback;
+import client.FileInfo;
+import client.StorageFileInfo;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -22,8 +25,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
 public class Controller implements Initializable {
-    private Network network = Network.getInstance();
-    private List<StorageFileInfo> listStorage = new ArrayList<>();
+
+    private final Network network = Network.getInstance();
+    private final List<StorageFileInfo> listStorage = new ArrayList<>();
 
 
     @FXML
@@ -34,6 +38,8 @@ public class Controller implements Initializable {
     Button deleteBtn;
 
 
+    @FXML
+    TextField storagePathField;
     @FXML
     TableView<StorageFileInfo> storageFilesTable;
     @FXML
@@ -214,8 +220,8 @@ public class Controller implements Initializable {
                 public void callback(boolean getAuth) {
                     if(getAuth){
                         auth.setVisible(false);
-                        makeList(network.askStorageInfo());
-                        updateStorageList();
+                        //makeList(network.askStorageInfo());
+                        updateStorageList(network.askStorageInfo());
                     } else {
                         new Alert(Alert.AlertType.INFORMATION, "Неправильные данные", ButtonType.APPLY).showAndWait();
                     }
@@ -227,14 +233,16 @@ public class Controller implements Initializable {
 
     }
 
-    private void makeList(String info) {
+
+    public void updateStorageList(String info) {
         listStorage.clear();
-        String[] infoList = info.split(" ");
-        for(int i = 0; i < infoList.length; i += 2){
+        String[] infoList = info.split(":");
+        System.out.println(infoList);
+        storagePathField.setText(infoList[0]);
+        for(int i = 1; i < infoList.length; i += 2){
             listStorage.add(new StorageFileInfo(infoList[i], Long.parseLong(infoList[i + 1])));
         }
-    }
-    public void updateStorageList() {
+
         storageFilesTable.getItems().clear();
         storageFilesTable.getItems().addAll(listStorage);
         for (StorageFileInfo storageFileInfo : listStorage) {
@@ -253,18 +261,36 @@ public class Controller implements Initializable {
         Platform.exit();
     }
 
-//    public void btnDownload(ActionEvent actionEvent) {
-//        
-//    }
 
+    public String getSelectedStorageFilename() {
+        if (!storageFilesTable.isFocused()) {
+            return null;
+        }
+        return storageFilesTable.getSelectionModel().getSelectedItem().getFilename();
+    }
+
+    public long getSelectedStorageFileSize() {
+        return storageFilesTable.getSelectionModel().getSelectedItem().getSize();
+    }
+    public void btnDownload(ActionEvent actionEvent) {
+        //hideButtons(); //не пропадают, когда нужно
+        Platform.runLater(this::hideButtons); //кнопки не убираются сразу - ждут конца загрузки, исчезают при появлении алерта только
+        network.downloadFile(pathField.getText(), getSelectedStorageFilename(), getSelectedStorageFileSize(), new BoolCallback() {
+            @Override
+            public void callback(boolean bool) {
+                updateList(Paths.get(pathField.getText()));
+                if(bool) new Alert(Alert.AlertType.INFORMATION, "Файл успешно загружен из облака", ButtonType.APPLY).showAndWait();
+                showButtons();
+            }
+        });
+    }
     public void btnUpload(ActionEvent actionEvent) {
         hideButtons();
         network.uploadFIle(getCurrentPath(), getSelectedFilename(), getSelectedFileSize(), new BoolCallback() {
             @Override
             public void callback(boolean bool) {
                 if(bool) new Alert(Alert.AlertType.INFORMATION, "Файл успешно загружен в облако", ButtonType.APPLY).showAndWait();
-                makeList(network.askStorageInfo());
-                updateStorageList();
+                updateStorageList(network.askStorageInfo());
                 showButtons();
             }
         });
@@ -279,5 +305,27 @@ public class Controller implements Initializable {
         uploadBtn.setVisible(false);
         downloadBtn.setVisible(false);
         deleteBtn.setVisible(false);
+    }
+
+
+    public void btnDelete(ActionEvent actionEvent) {
+        if(filesTable.isFocused()){
+            try {
+                Files.delete(Paths.get(getCurrentPath() + "/" + getSelectedFilename()));
+                updateList(Paths.get(getCurrentPath()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else if (storageFilesTable.isFocused()){
+            network.deleteFile(getSelectedStorageFilename(), new BoolCallback() {
+                @Override
+                public void callback(boolean bool) {
+                    if(bool){
+                        updateStorageList(network.askStorageInfo());
+                    }
+                }
+            });
+        }
+
     }
 }

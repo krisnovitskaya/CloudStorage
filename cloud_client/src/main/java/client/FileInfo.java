@@ -1,8 +1,8 @@
+package client;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 
 public class FileInfo {
 

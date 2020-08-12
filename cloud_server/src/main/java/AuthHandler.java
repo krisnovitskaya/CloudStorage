@@ -5,8 +5,11 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class AuthHandler extends ChannelInboundHandlerAdapter {
+    private final String clientServer = "cloudserver_logins";
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -36,6 +39,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
 
         if (authData[2].equals("&")) {
             if (DBService.addUser(authData[0], authData[1])) {
+                Files.createDirectory(Paths.get(clientServer + "/" + authData[0]));
                 finishAuth(ctx, authData[0]);
                 //добавить проверку и обработку уникальности логина
                 //контроль уже залогиненных пользователей
