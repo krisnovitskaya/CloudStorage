@@ -1,17 +1,19 @@
 package DataBase;
 
-import java.io.FileNotFoundException;
 import java.sql.*;
 
 public class DBService {
     private static Connection connection;
     private static PreparedStatement pstmt;
+    private static final String prepSelect = "select id from users where login = ? and password = ?";
+    private static final String prepInsert = "insert into users (login, password) values ( ?, ?)";
+    private static final String prepCheckLogin = "select id from users where login = ?";
 
     public static boolean checkLoginPass(String login, String password){
-        String prep = "select id from users where login = ? and password = ?";
+        //String prep = "select id from users where login = ? and password = ?";
         try {
             connect();
-            pstmt = connection.prepareStatement(prep);
+            pstmt = connection.prepareStatement(prepSelect);
             pstmt.setString(1, login);
             pstmt.setString(2, password);
 
@@ -28,10 +30,19 @@ public class DBService {
     }
 
     public static boolean addUser(String login, String password){
-        String prep = "insert into users (login, password) values ( ?, ?)";
+        //String prep = "insert into users (login, password) values ( ?, ?)";
         try {
             connect();
-            pstmt = connection.prepareStatement(prep);
+
+            pstmt = connection.prepareStatement(prepCheckLogin);
+            pstmt.setString(1, login);
+
+            ResultSet rs = pstmt.executeQuery();
+            if(rs.next()){
+                return false;
+            }
+
+            pstmt = connection.prepareStatement(prepInsert);
             pstmt.setString(1, login);
             pstmt.setString(2, password);
 

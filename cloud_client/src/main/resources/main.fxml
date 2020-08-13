@@ -34,7 +34,7 @@
         </VBox>
         <VBox HBox.hgrow="ALWAYS">
             <HBox >
-                <Button text="Вверх" />
+                <Button text="Вверх" fx:id="storageBtnUp" onAction="#storageDirUp"/>
                 <TextField fx:id="storagePathField" editable="false" HBox.hgrow="ALWAYS" />
             </HBox>
             <TableView fx:id="storageFilesTable" VBox.vgrow="ALWAYS" />

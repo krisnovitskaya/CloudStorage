@@ -1,14 +1,17 @@
 public class ClientStatus {
-//    private boolean authOK = false;
     private String login;
-    //private int currentAction; //0 wait, 1 upload, 2 download
+    private String currentDir;
     private CurrentAction currentAction;
     private String currentFileName;
     private long currentFileSize;
 
+    public String getCurrentDir() {
+        return currentDir;
+    }
 
-
-
+    public void setCurrentDir(String currentDir) {
+        this.currentDir = currentDir;
+    }
 
     public ClientStatus(){
         this.login = null;
@@ -16,14 +19,6 @@ public class ClientStatus {
         this.currentFileName = null;
         this.currentFileSize = -1;
     }
-
-//    public boolean isAuthOK() {
-//        return authOK;
-//    }
-//
-//    public void setAuthOK(boolean authOK) {
-//        this.authOK = authOK;
-//    }
 
     public String getLogin() {
         return login;

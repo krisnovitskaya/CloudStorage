@@ -3,6 +3,9 @@ import client.BoolCallback;
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.CountDownLatch;
 
 
@@ -41,7 +44,6 @@ public class Network {
         out.writeInt(authData.getBytes(StandardCharsets.UTF_8).length);
         if (in.readByte() == Command.commandOK) {
             out.write(authData.getBytes("UTF-8"));
-            System.out.println("send logpas");
             callback.callback(in.readByte() == Command.commandOK);
         } else {
             System.err.println("ошибка ответа сервера");
@@ -57,49 +59,56 @@ public class Network {
             e.printStackTrace();
         }
     }
-    public String askStorageInfo(){
 
-        String storageInfo;
+    public String askStorageInfo(String storagePath){ //String storagePath заготовка под перемещение по папкам
         byte[] byteInfo;
+        int commandSize = Byte.BYTES + Integer.BYTES + storagePath.getBytes(StandardCharsets.UTF_8).length;
         try{
-            out.writeInt(1);
+            out.writeInt(commandSize);
             if (in.readByte() == Command.commandOK) {
                 out.writeByte(Command.storage_INFO);
-                int size = in.readInt();
-                byteInfo = new byte[size];
+                out.writeInt(storagePath.getBytes(StandardCharsets.UTF_8).length);
+                out.write(storagePath.getBytes(StandardCharsets.UTF_8));
+                byteInfo = new byte[in.readInt()];
                 in.read(byteInfo);
-                storageInfo = new String(byteInfo, StandardCharsets.UTF_8);
-                return storageInfo;
+                return new String(byteInfo, StandardCharsets.UTF_8);
             } else {
                 System.err.println("ошибка ответа сервера");
-                return new String(); //заглушка
+                return null;
             }
         }catch (IOException e){
             e.printStackTrace();
+            return null;
         }
-        return new String(); //заглушка
     }
 
-    public void uploadFIle(String path, String selectedFilename, long selectedFileSize, BoolCallback boolCallback) {
+    public void uploadFIle(String path, String selectedFilename, long selectedFileSize, BoolCallback callback) {
         int commandSize = Byte.BYTES + Integer.BYTES + selectedFilename.getBytes(StandardCharsets.UTF_8).length + Long.BYTES;
         try {
             out.writeInt(commandSize);
-            System.out.println(in.readByte()); //okbyte
+            if(in.readByte() != Command.commandOK){
+                callback.callback(false);
+                return;
+            }
             out.writeByte(Command.upload);
             out.writeInt(selectedFilename.getBytes(StandardCharsets.UTF_8).length);
             out.write(selectedFilename.getBytes(StandardCharsets.UTF_8));
             out.writeLong(selectedFileSize);
-            System.out.println(in.readByte()); //okbyte
+            if(in.readByte() != Command.commandOK){
+                callback.callback(false);
+                return;
+            }
             FileInputStream fis = new FileInputStream(path + "/" + selectedFilename);
             byte[] buffer = new byte[1024 * 5 * 1024];
+            int readBytes;
             while (fis.available() > 0) {
-                int readBytes = fis.read(buffer);
-                System.out.println(readBytes);
+                readBytes = fis.read(buffer);
                 out.write(buffer, 0, readBytes);
             }
             fis.close();
-            boolCallback.callback(in.readByte() == Command.commandOK);
+            callback.callback(in.readByte() == Command.commandOK);
         }catch (IOException e){
+            callback.callback(false);
             e.printStackTrace();
         }
 
@@ -109,29 +118,31 @@ public class Network {
         try {
             int commandSize = Byte.BYTES + Integer.BYTES + filename.getBytes(StandardCharsets.UTF_8).length;
             out.writeInt(commandSize);
-            if(in.readByte() == Command.commandOK) System.out.println("ok");// dodelat
+            if(in.readByte() != Command.commandOK){
+                callback.callback(false);
+                return;
+            }
+
             out.writeByte(Command.download);
             out.writeInt(filename.getBytes(StandardCharsets.UTF_8).length);
             out.write(filename.getBytes(StandardCharsets.UTF_8));
-            File file = new File(path + "/" + filename);
-            System.out.println();
-            if (file.exists()) {
-                file.delete();
-                file.createNewFile();
-            } else {
-                file.createNewFile();
+
+            Path file = Paths.get(path + "/" + filename);
+            Files.deleteIfExists(Paths.get(path + "/" + filename));
+            Files.createFile(Paths.get(path + "/" + filename));
+
+            try (FileOutputStream fos = new FileOutputStream(file.toFile(), true))
+            {
+                byte[] buffer = new byte[1024 * 1024];
+                int readBytes;
+                while (Files.size(file) != fileSize) {
+                    readBytes = in.read(buffer);
+                    fos.write(buffer, 0, readBytes);
+                }
+                System.out.println("file download");
+                callback.callback(true);
             }
 
-            FileOutputStream fos = new FileOutputStream(file, true);
-            byte[] buffer = new byte[1024 * 1024];
-            while (file.length() != fileSize) {
-                int readBytes = in.read(buffer);
-                System.out.println(readBytes);
-                fos.write(buffer, 0, readBytes);
-            }
-            System.out.println("file download");
-            fos.close();
-            callback.callback(true);
         }catch (IOException e){
             e.printStackTrace();
         }
@@ -141,13 +152,16 @@ public class Network {
         try {
             int commandSize = Byte.BYTES + Integer.BYTES + filename.getBytes(StandardCharsets.UTF_8).length;
             out.writeInt(commandSize);
-            if (in.readByte() == Command.commandOK) System.out.println("ok");// dodelat
+            if(in.readByte() != Command.commandOK){
+                callback.callback(false);
+                return;
+            }
             out.writeByte(Command.delete_FILE);
             out.writeInt(filename.getBytes(StandardCharsets.UTF_8).length);
             out.write(filename.getBytes(StandardCharsets.UTF_8));
             if (in.readByte() == Command.commandOK){
                 callback.callback(true);
-            }else {callback.callback(false);}
+            } else {callback.callback(false);}
         } catch (IOException e){
             e.printStackTrace();
         }

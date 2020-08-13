@@ -5,6 +5,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import server.Const;
 
 public class ServerApp {
     public void run() throws Exception {
@@ -20,7 +21,7 @@ public class ServerApp {
                             ch.pipeline().addLast(new FirstHandler(),new AuthHandler());
                         }
                     });
-            ChannelFuture future = serverBootstrap.bind(8189).sync();
+            ChannelFuture future = serverBootstrap.bind(Const.PORT).sync();
             System.out.println("storage server up");
             future.channel().closeFuture().sync();
         } finally {

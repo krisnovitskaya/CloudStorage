@@ -31,13 +31,10 @@ public class Controller implements Initializable {
 
 
     @FXML
-    Button uploadBtn;
-    @FXML
-    Button downloadBtn;
-    @FXML
-    Button deleteBtn;
+    Button storageBtnUp;
 
-
+    @FXML
+    Button uploadBtn, downloadBtn, deleteBtn;
     @FXML
     TextField storagePathField;
     @FXML
@@ -121,6 +118,7 @@ public class Controller implements Initializable {
                     if (Files.isDirectory(path)) {
                         updateList(path);
                     }
+                    //эксепшены, если кликать по пустому полю - поправить
                 }
             }
         });
@@ -161,6 +159,22 @@ public class Controller implements Initializable {
 
         storageFilesTable.getColumns().addAll(storage_fileTypeColumn, storage_filenameColumn, storage_fileSizeColumn);
         storageFilesTable.getSortOrder().add(storage_fileTypeColumn);
+
+
+        //доделать перемещение
+        storageFilesTable.setOnMouseClicked(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                if (event.getClickCount() == 2) {
+                    if(storagePathField.getText().equals("")) return;
+                    if(getSelectedStorageFileSize() != -1L) return;
+                    //эксепшены, если кликать по пустому полю - поправить
+                    String wantedDir = storagePathField.getText() + "/" + getSelectedStorageFilename();
+                    System.out.println(wantedDir);
+                    updateStorageList(network.askStorageInfo(wantedDir));
+                }
+            }
+        });
     }
 
     public void updateList(Path path) {
@@ -220,8 +234,7 @@ public class Controller implements Initializable {
                 public void callback(boolean getAuth) {
                     if(getAuth){
                         auth.setVisible(false);
-                        //makeList(network.askStorageInfo());
-                        updateStorageList(network.askStorageInfo());
+                        updateStorageList(network.askStorageInfo(loginField.getText()));
                     } else {
                         new Alert(Alert.AlertType.INFORMATION, "Неправильные данные", ButtonType.APPLY).showAndWait();
                     }
@@ -235,9 +248,12 @@ public class Controller implements Initializable {
 
 
     public void updateStorageList(String info) {
+        if(info == null) {
+            new Alert(Alert.AlertType.ERROR, "Возникла ошибка обновления списка файлов из облака", ButtonType.APPLY).showAndWait();
+            return;
+        }
         listStorage.clear();
         String[] infoList = info.split(":");
-        System.out.println(infoList);
         storagePathField.setText(infoList[0]);
         for(int i = 1; i < infoList.length; i += 2){
             listStorage.add(new StorageFileInfo(infoList[i], Long.parseLong(infoList[i + 1])));
@@ -245,10 +261,8 @@ public class Controller implements Initializable {
 
         storageFilesTable.getItems().clear();
         storageFilesTable.getItems().addAll(listStorage);
-        for (StorageFileInfo storageFileInfo : listStorage) {
-            storageFileInfo.print();
-        }
         storageFilesTable.sort();
+        //как отобразить пустые колонки или поставить вместо "no table content" что-то своей, если текущая папка пуста  - в  таблице нет записей.?
     }
 
 
@@ -262,6 +276,7 @@ public class Controller implements Initializable {
     }
 
 
+
     public String getSelectedStorageFilename() {
         if (!storageFilesTable.isFocused()) {
             return null;
@@ -273,38 +288,51 @@ public class Controller implements Initializable {
         return storageFilesTable.getSelectionModel().getSelectedItem().getSize();
     }
     public void btnDownload(ActionEvent actionEvent) {
-        //hideButtons(); //не пропадают, когда нужно
-        Platform.runLater(this::hideButtons); //кнопки не убираются сразу - ждут конца загрузки, исчезают при появлении алерта только
+        hideButtons(); //не пропадают, когда нужно
+        //Platform.runLater(this::hideButtons); //кнопки не убираются сразу - ждут конца загрузки, исчезают при появлении алерта только
         network.downloadFile(pathField.getText(), getSelectedStorageFilename(), getSelectedStorageFileSize(), new BoolCallback() {
             @Override
             public void callback(boolean bool) {
                 updateList(Paths.get(pathField.getText()));
-                if(bool) new Alert(Alert.AlertType.INFORMATION, "Файл успешно загружен из облака", ButtonType.APPLY).showAndWait();
+                if(bool) {
+                    new Alert(Alert.AlertType.INFORMATION, "Файл успешно загружен из облака", ButtonType.APPLY).showAndWait();
+                } else {
+                    new Alert(Alert.AlertType.ERROR, "Не удалось скачать файл", ButtonType.APPLY).showAndWait();
+                }
                 showButtons();
             }
         });
     }
     public void btnUpload(ActionEvent actionEvent) {
-        hideButtons();
+        hideButtons(); //не пропадают, когда нужно
+        //Platform.runLater(this::hideButtons); //кнопки не убираются сразу - ждут конца загрузки, исчезают при появлении алерта только
         network.uploadFIle(getCurrentPath(), getSelectedFilename(), getSelectedFileSize(), new BoolCallback() {
             @Override
             public void callback(boolean bool) {
-                if(bool) new Alert(Alert.AlertType.INFORMATION, "Файл успешно загружен в облако", ButtonType.APPLY).showAndWait();
-                updateStorageList(network.askStorageInfo());
+                if(bool) {
+                    updateStorageList(network.askStorageInfo(storagePathField.getText()));
+                    new Alert(Alert.AlertType.INFORMATION, "Файл успешно загружен в облако", ButtonType.APPLY).showAndWait();
+                } else {
+                    new Alert(Alert.AlertType.ERROR, "Не загрузить файл", ButtonType.APPLY).showAndWait();
+                }
                 showButtons();
             }
         });
     }
 
     private void showButtons(){
-        uploadBtn.setVisible(true);
-        downloadBtn.setVisible(true);
-        deleteBtn.setVisible(true);
+        //Platform.runLater(()->{
+            uploadBtn.setVisible(true);
+            downloadBtn.setVisible(true);
+            deleteBtn.setVisible(true);
+       // });
     }
     private void hideButtons(){
-        uploadBtn.setVisible(false);
-        downloadBtn.setVisible(false);
-        deleteBtn.setVisible(false);
+        //Platform.runLater(()->{
+            uploadBtn.setVisible(false);
+            downloadBtn.setVisible(false);
+            deleteBtn.setVisible(false);
+        //});
     }
 
 
@@ -321,11 +349,18 @@ public class Controller implements Initializable {
                 @Override
                 public void callback(boolean bool) {
                     if(bool){
-                        updateStorageList(network.askStorageInfo());
+                        updateStorageList(network.askStorageInfo(storagePathField.getText()));
+                    } else{
+                        new Alert(Alert.AlertType.ERROR, "Ошибка при удалении файла", ButtonType.APPLY).showAndWait();
                     }
                 }
             });
         }
 
+    }
+
+    public void storageDirUp(ActionEvent actionEvent) {
+        //доделать кнопку
+        System.out.println("сделай меня");
     }
 }
