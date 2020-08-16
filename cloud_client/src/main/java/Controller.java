@@ -1,6 +1,11 @@
 import client.BoolCallback;
 import client.FileInfo;
 import client.StorageFileInfo;
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.jmx.MXNodeAlgorithm;
+import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import com.sun.javafx.sg.prism.NGNode;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -8,9 +13,11 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.text.Text;
 
 import java.io.IOException;
 import java.net.URL;
@@ -268,7 +275,7 @@ public class Controller implements Initializable {
         storageFilesTable.getItems().clear();
         storageFilesTable.getItems().addAll(listStorage);
         storageFilesTable.sort();
-        //как отобразить пустые колонки или поставить вместо "no table content" что-то своей, если текущая папка пуста  - в  таблице нет записей.?
+        if(storageFilesTable.getItems().size() == 0) storageFilesTable.setPlaceholder(new Text("Папка пуста"));
     }
 
 
