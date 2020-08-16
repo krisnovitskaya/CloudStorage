@@ -49,7 +49,6 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             if (DBService.addUser(authData[0], authData[1])) {
                 Files.createDirectory(Paths.get(Const.CLOUD_PACKAGE + "/" + authData[0]));
                 finishAuth(ctx, authData[0]);
-                //добавить проверку и обработку уникальности логина
                 //контроль уже залогиненных пользователей
             }else {
                 restartAuth(ctx);

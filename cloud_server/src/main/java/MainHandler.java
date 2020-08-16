@@ -37,7 +37,7 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
             long filesize = accumulator.readLong();
             clientStatus.setCurrentFileSize(filesize);
             accumulator.clear();
-            ctx.pipeline().get(FirstHandler.class).setAccumulatorCapacity(ctx,1024, 10 * 1024 * 1024);
+            ctx.pipeline().get(FirstHandler.class).setAccumulatorCapacity(ctx,1024, 65536);
             sendCommand(ctx, Command.commandOK);
             return;
         }

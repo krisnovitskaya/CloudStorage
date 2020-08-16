@@ -60,7 +60,7 @@ public class Network {
         }
     }
 
-    public String askStorageInfo(String storagePath){ //String storagePath заготовка под перемещение по папкам
+    public String askStorageInfo(String storagePath){
         byte[] byteInfo;
         int commandSize = Byte.BYTES + Integer.BYTES + storagePath.getBytes(StandardCharsets.UTF_8).length;
         try{
@@ -83,38 +83,40 @@ public class Network {
     }
 
     public void uploadFIle(String path, String selectedFilename, long selectedFileSize, BoolCallback callback) {
-        int commandSize = Byte.BYTES + Integer.BYTES + selectedFilename.getBytes(StandardCharsets.UTF_8).length + Long.BYTES;
-        try {
-            out.writeInt(commandSize);
-            if(in.readByte() != Command.commandOK){
+        new Thread(() -> {
+            int commandSize = Byte.BYTES + Integer.BYTES + selectedFilename.getBytes(StandardCharsets.UTF_8).length + Long.BYTES;
+            try {
+                out.writeInt(commandSize);
+                if (in.readByte() != Command.commandOK) {
+                    callback.callback(false);
+                    return;
+                }
+                out.writeByte(Command.upload);
+                out.writeInt(selectedFilename.getBytes(StandardCharsets.UTF_8).length);
+                out.write(selectedFilename.getBytes(StandardCharsets.UTF_8));
+                out.writeLong(selectedFileSize);
+                if (in.readByte() != Command.commandOK) {
+                    callback.callback(false);
+                    return;
+                }
+                FileInputStream fis = new FileInputStream(path + "/" + selectedFilename);
+                byte[] buffer = new byte[1024 * 5 * 1024];
+                int readBytes;
+                while (fis.available() > 0) {
+                    readBytes = fis.read(buffer);
+                    out.write(buffer, 0, readBytes);
+                }
+                fis.close();
+                callback.callback(in.readByte() == Command.commandOK);
+            } catch (IOException e) {
                 callback.callback(false);
-                return;
+                e.printStackTrace();
             }
-            out.writeByte(Command.upload);
-            out.writeInt(selectedFilename.getBytes(StandardCharsets.UTF_8).length);
-            out.write(selectedFilename.getBytes(StandardCharsets.UTF_8));
-            out.writeLong(selectedFileSize);
-            if(in.readByte() != Command.commandOK){
-                callback.callback(false);
-                return;
-            }
-            FileInputStream fis = new FileInputStream(path + "/" + selectedFilename);
-            byte[] buffer = new byte[1024 * 5 * 1024];
-            int readBytes;
-            while (fis.available() > 0) {
-                readBytes = fis.read(buffer);
-                out.write(buffer, 0, readBytes);
-            }
-            fis.close();
-            callback.callback(in.readByte() == Command.commandOK);
-        }catch (IOException e){
-            callback.callback(false);
-            e.printStackTrace();
-        }
-
+        }).start();
     }
 
     public void downloadFile(String path, String filename, long fileSize, BoolCallback callback) {
+        new Thread(() -> {
         try {
             int commandSize = Byte.BYTES + Integer.BYTES + filename.getBytes(StandardCharsets.UTF_8).length;
             out.writeInt(commandSize);
@@ -146,6 +148,7 @@ public class Network {
         }catch (IOException e){
             e.printStackTrace();
         }
+        }).start();
     }
 
     public void deleteFile(String filename, BoolCallback callback) {

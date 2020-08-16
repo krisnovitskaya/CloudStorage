@@ -6,7 +6,6 @@ import server.Const;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class FirstHandler extends ChannelInboundHandlerAdapter {
@@ -45,13 +44,8 @@ public class FirstHandler extends ChannelInboundHandlerAdapter {
         accumulator.writeBytes(inBuf);
         inBuf.release();
         if(clientStatus.getCurrentAction() == CurrentAction.UPLOAD){
-
-            //при закачке 35Гб файла, да и вообще любого свыше мегабайта. упираюсь в ограничение максимального пакета TCP/IP 65536,
-            //то есть Server.FileStorageService.uploadFile вызывается на каждый макс пакет 65536, хотя accumulator может растягиваться до 10МБ
-            // как будет эффективней, оставить как есть, или попытаться копить в аккумуляторе до 8-10МБ и только потом вызывать Server.FileStorageService.uploadFile ???
-            // позволит ли это увеличить скорость закачки?
-
             FileStorageService.uploadFile(ctx, clientStatus, accumulator, bytes, new Callback() {
+
                 @Override
                 public void callback() {
                     System.out.println("file upload done " + clientStatus.getCurrentFileName());
@@ -79,7 +73,6 @@ public class FirstHandler extends ChannelInboundHandlerAdapter {
         accumulator.release();
         ByteBufAllocator allocator = ctx.alloc();
         accumulator = allocator.directBuffer(accumulatorCapacity, maxCapacity);
-        System.out.println("capacity set = " + accumulator.capacity());
     }
 
 

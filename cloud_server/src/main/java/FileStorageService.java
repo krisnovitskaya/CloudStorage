@@ -21,7 +21,6 @@ public class FileStorageService {
     public static void sendToClientFile(ChannelHandlerContext ctx, ClientStatus clientStatus, ChannelFutureListener finishListener) throws IOException {
 
         Path path = Paths.get(Const.CLOUD_PACKAGE + "/" + clientStatus.getCurrentDir() + "/" + clientStatus.getCurrentFileName());
-        //System.out.println(path.toString());
         FileRegion region = new DefaultFileRegion(path.toFile(), 0, Files.size(path));
         ChannelFuture future = ctx.channel().writeAndFlush(region);
         if (finishListener != null) {
@@ -36,8 +35,6 @@ public class FileStorageService {
             accumulator.readBytes(bytes, 0, readableBytes);
             accumulator.clear();
             raf.write(bytes, 0, readableBytes);
-            //System.out.println("write readable " + readableBytes);
-            System.out.println(raf.length());
             if (raf.length() == clientStatus.getCurrentFileSize()) {
                 callback.callback();
             }

@@ -42,7 +42,7 @@
     </HBox>
 
 
-    <HBox spacing="5">
+    <HBox fx:id="buttonsBox" spacing="5">
         <Button fx:id="uploadBtn" focusTraversable="false" maxWidth="Infinity" text="Загрузить файл" HBox.hgrow="ALWAYS" onAction="#btnUpload"/>
         <Button fx:id="downloadBtn" focusTraversable="false" maxWidth="Infinity" text="Скачать файл" HBox.hgrow="ALWAYS" onAction="#btnDownload" />
         <Button fx:id="deleteBtn" focusTraversable="false" maxWidth="Infinity" text="Удалить файл" HBox.hgrow="ALWAYS" onAction="#btnDelete"/>
