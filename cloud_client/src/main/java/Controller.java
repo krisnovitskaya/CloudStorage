@@ -1,11 +1,5 @@
-import client.BoolCallback;
 import client.FileInfo;
 import client.StorageFileInfo;
-import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import com.sun.javafx.sg.prism.NGNode;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -13,7 +7,6 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
@@ -27,6 +20,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
@@ -35,7 +29,12 @@ public class Controller implements Initializable {
 
     private final Network network = Network.getInstance();
     private final List<StorageFileInfo> listStorage = new ArrayList<>();
+
     private String login;
+
+
+    @FXML
+    ProgressBar progressBar;
 
     @FXML
     HBox buttonsBox;
@@ -46,6 +45,8 @@ public class Controller implements Initializable {
 
     @FXML
     Button uploadBtn, downloadBtn, deleteBtn;
+    @FXML
+    Button createDirBtn;
     @FXML
     TextField storagePathField;
     @FXML
@@ -135,7 +136,7 @@ public class Controller implements Initializable {
             }
         });
 
-        updateList(Paths.get("."));
+        updateList(Paths.get("../"));
 
         //настройка серверной таблицы
         TableColumn<StorageFileInfo, String> storage_fileTypeColumn = new TableColumn<>();
@@ -186,6 +187,8 @@ public class Controller implements Initializable {
                 }
             }
         });
+
+        progressBar.setVisible(false);
     }
 
     public void updateList(Path path) {
@@ -302,8 +305,7 @@ public class Controller implements Initializable {
     }
     public void btnDownload(ActionEvent actionEvent) {
         hideButtons();
-
-        network.downloadFile(pathField.getText(), getSelectedStorageFilename(), getSelectedStorageFileSize(), new BoolCallback() {
+        network.downloadFile(pathField.getText(), getSelectedStorageFilename(), getSelectedStorageFileSize(), progressBar, new BoolCallback() {
             @Override
             public void callback(boolean bool) {
                 updateList(Paths.get(pathField.getText()));
@@ -323,7 +325,7 @@ public class Controller implements Initializable {
     public void btnUpload(ActionEvent actionEvent) {
 
             hideButtons();
-                network.uploadFIle(getCurrentPath(), getSelectedFilename(), getSelectedFileSize(), new BoolCallback() {
+                network.uploadFIle(getCurrentPath(), getSelectedFilename(), getSelectedFileSize(), progressBar,new BoolCallback() {
                     @Override
                     public void callback(boolean bool) {
                         showButtons();
@@ -349,11 +351,13 @@ public class Controller implements Initializable {
         buttonsBox.setDisable(false);
         storageFilesTable.setDisable(false);
         storageBtnUp.setDisable(false);
+        progressBar.setVisible(false);
     }
     private void hideButtons(){
         buttonsBox.setDisable(true);
         storageFilesTable.setDisable(true);
         storageBtnUp.setDisable(true);
+        progressBar.setVisible(true);
     }
 
 
@@ -385,5 +389,41 @@ public class Controller implements Initializable {
         if(storagePathField.getText().equals(login)) return;
         String wantedDir = storagePathField.getText().substring(0,storagePathField.getText().lastIndexOf("/"));
         updateStorageList(network.askStorageInfo(wantedDir));
+    }
+
+    public void btnCreateDir(ActionEvent actionEvent) {
+        if(storageFilesTable.isFocused() && login != null){
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Создание новой папки");
+        dialog.setHeaderText("Создаем папку на облачном хранилище");
+        dialog.setContentText("Введите название новой папки:");
+        Optional<String> result = dialog.showAndWait();
+        result.ifPresent(dirName -> network.createDirectory(dirName, new BoolCallback() {
+            @Override
+            public void callback(boolean bool) {
+                if(bool){
+                    updateStorageList(network.askStorageInfo(storagePathField.getText()));
+                } else{
+                    new Alert(Alert.AlertType.ERROR, "Ошибка создания папки", ButtonType.APPLY).showAndWait();
+                }
+            }
+        }));
+        } else if(filesTable.isFocused()){
+
+            TextInputDialog dialog = new TextInputDialog();
+            dialog.setTitle("Создание новой папки");
+            dialog.setHeaderText("Создаем папку на локальном компьютере");
+            dialog.setContentText("Введите название новой папки:");
+            Optional<String> result = dialog.showAndWait();
+            result.ifPresent(dirName -> {
+                try {
+                    Files.createDirectory(Paths.get(pathField.getText() + "/" + dirName));
+                    updateList(Paths.get(pathField.getText()));
+                } catch (IOException e) {
+                    new Alert(Alert.AlertType.ERROR, "Ошибка создания папки", ButtonType.APPLY).showAndWait();
+                }
+            });
+
+        }
     }
 }

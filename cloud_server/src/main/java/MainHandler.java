@@ -2,17 +2,17 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import server.Callback;
 import server.Const;
 
+import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class MainHandler extends ChannelInboundHandlerAdapter {
     private ClientStatus clientStatus;
     private byte[] buf = new byte[256];
+    private int nameSize;
 
 
 
@@ -28,15 +28,16 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
 
         if(signalByte == Command.upload){
             clientStatus.setCurrentAction(CurrentAction.UPLOAD);
-            int filenamesize = accumulator.readInt();
+            int nameSize = accumulator.readInt();
 
-            accumulator.readBytes(buf, 0, filenamesize);
-            clientStatus.setCurrentFileName(new String(buf, 0, filenamesize , StandardCharsets.UTF_8));
+            accumulator.readBytes(buf, 0, nameSize);
+            clientStatus.setCurrentFileName(new String(buf, 0, nameSize , StandardCharsets.UTF_8));
 
             Files.deleteIfExists(Paths.get(Const.CLOUD_PACKAGE + "/" + clientStatus.getLogin() + "/" + clientStatus.getCurrentFileName()));
             long filesize = accumulator.readLong();
             clientStatus.setCurrentFileSize(filesize);
             accumulator.clear();
+            clientStatus.setUploadFile(new RandomAccessFile(Const.CLOUD_PACKAGE + "/" + clientStatus.getCurrentDir() + "/" + clientStatus.getCurrentFileName(), "rw"));
             ctx.pipeline().get(FirstHandler.class).setAccumulatorCapacity(ctx,1024, 65536);
             sendCommand(ctx, Command.commandOK);
             return;
@@ -44,13 +45,18 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
 
         if(signalByte == Command.download){
             clientStatus.setCurrentAction(CurrentAction.DOWNLOAD);
-            int filenamesize = accumulator.readInt();
-            accumulator.readBytes(buf, 0, filenamesize);
-            clientStatus.setCurrentFileName(new String(buf, 0, filenamesize, StandardCharsets.UTF_8));
+            nameSize = accumulator.readInt();
+            accumulator.readBytes(buf, 0, nameSize);
+            clientStatus.setCurrentFileName(new String(buf, 0, nameSize, StandardCharsets.UTF_8));
 
+
+            long start = System.currentTimeMillis();
             System.out.println("start download");
             FileStorageService.sendToClientFile(ctx, clientStatus, futureListener ->{
                 if (futureListener.isSuccess()) {
+                    long end = System.currentTimeMillis();
+                    System.out.println("end download");
+                    System.out.println((end - start)/1000 + "download time");
                     System.out.println("file send complete");
                 } else {
                     futureListener.cause().printStackTrace();
@@ -76,10 +82,10 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
         }
 
         if(signalByte == Command.delete_FILE){
-            int filenamesize = accumulator.readInt();
-            accumulator.readBytes(buf, 0, filenamesize);
+            nameSize = accumulator.readInt();
+            accumulator.readBytes(buf, 0, nameSize);
             accumulator.clear();
-            clientStatus.setCurrentFileName(new String(buf, 0, filenamesize , StandardCharsets.UTF_8));
+            clientStatus.setCurrentFileName(new String(buf, 0, nameSize , StandardCharsets.UTF_8));
 
             FileStorageService.deleteFile(clientStatus, new Callback() {
                 @Override
@@ -89,8 +95,26 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
                     clearStatusSetWaitCommand(ctx);
                 }
             } );
+            return;
         }
 
+        if(signalByte == Command.create_DIRECTORY){
+            nameSize = accumulator.readInt();
+            accumulator.readBytes(buf, 0, nameSize);
+            accumulator.clear();
+
+            FileStorageService.createDirectory(clientStatus, new String(buf, 0, nameSize, StandardCharsets.UTF_8), new BoolCallback() {
+                @Override
+                public void callback(boolean bool) {
+                    if(bool){
+                        sendCommand(ctx, Command.commandOK);
+                    } else {
+                        sendCommand(ctx, Command.commandNO);
+                    }
+                }
+            });
+            clearStatusSetWaitCommand(ctx);
+        }
 
     }
 

@@ -1,9 +1,20 @@
+import java.io.RandomAccessFile;
+
 public class ClientStatus {
     private String login;
     private String currentDir;
     private CurrentAction currentAction;
     private String currentFileName;
     private long currentFileSize;
+    private RandomAccessFile uploadFile;
+
+    public RandomAccessFile getUploadFile() {
+        return uploadFile;
+    }
+
+    public void setUploadFile(RandomAccessFile uploadFile) {
+        this.uploadFile = uploadFile;
+    }
 
     public String getCurrentDir() {
         return currentDir;

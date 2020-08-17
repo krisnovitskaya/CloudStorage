@@ -1,7 +1,6 @@
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.*;
-import server.Callback;
 import server.Const;
 
 import java.io.IOException;
@@ -14,7 +13,7 @@ public class FirstHandler extends ChannelInboundHandlerAdapter {
     public final int COMMAND_ACC_CAPACITY = 4;
 
 
-    private byte[] bytes = new byte[10*1024*1024];
+    private byte[] bytes = new byte[65536];
 
 
     public FirstHandler(){
@@ -44,7 +43,7 @@ public class FirstHandler extends ChannelInboundHandlerAdapter {
         accumulator.writeBytes(inBuf);
         inBuf.release();
         if(clientStatus.getCurrentAction() == CurrentAction.UPLOAD){
-            FileStorageService.uploadFile(ctx, clientStatus, accumulator, bytes, new Callback() {
+            FileStorageService.uploadFile(clientStatus, accumulator, bytes, new Callback() {
 
                 @Override
                 public void callback() {

@@ -1,4 +1,5 @@
-import client.BoolCallback;
+import javafx.application.Platform;
+import javafx.scene.control.ProgressBar;
 
 import java.io.*;
 import java.net.Socket;
@@ -82,7 +83,7 @@ public class Network {
         }
     }
 
-    public void uploadFIle(String path, String selectedFilename, long selectedFileSize, BoolCallback callback) {
+    public void uploadFIle(String path, String selectedFilename, long selectedFileSize, ProgressBar progressBar, BoolCallback callback) {
         new Thread(() -> {
             int commandSize = Byte.BYTES + Integer.BYTES + selectedFilename.getBytes(StandardCharsets.UTF_8).length + Long.BYTES;
             try {
@@ -103,6 +104,13 @@ public class Network {
                 byte[] buffer = new byte[1024 * 5 * 1024];
                 int readBytes;
                 while (fis.available() > 0) {
+                    Platform.runLater(() -> {
+                        try {
+                            progressBar.setProgress((double) (selectedFileSize - fis.available())/selectedFileSize);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
                     readBytes = fis.read(buffer);
                     out.write(buffer, 0, readBytes);
                 }
@@ -115,7 +123,7 @@ public class Network {
         }).start();
     }
 
-    public void downloadFile(String path, String filename, long fileSize, BoolCallback callback) {
+    public void downloadFile(String path, String filename, long fileSize, ProgressBar progressBar, BoolCallback callback) {
         new Thread(() -> {
         try {
             int commandSize = Byte.BYTES + Integer.BYTES + filename.getBytes(StandardCharsets.UTF_8).length;
@@ -135,11 +143,19 @@ public class Network {
 
             try (FileOutputStream fos = new FileOutputStream(file.toFile(), true))
             {
-                byte[] buffer = new byte[1024 * 1024];
+                byte[] buffer = new byte[65536];
                 int readBytes;
                 while (Files.size(file) != fileSize) {
                     readBytes = in.read(buffer);
+                    //System.out.println(readBytes);
                     fos.write(buffer, 0, readBytes);
+                    Platform.runLater(() -> {
+                        try {
+                            progressBar.setProgress((double) Files.size(file)/fileSize);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
                 }
                 System.out.println("file download");
                 callback.callback(true);
@@ -168,7 +184,24 @@ public class Network {
         } catch (IOException e){
             e.printStackTrace();
         }
+    }
 
-
+    public void createDirectory(String dirName, BoolCallback callback){
+        try{
+            int commandSize = Byte.BYTES + Integer.BYTES + dirName.getBytes(StandardCharsets.UTF_8).length;
+            out.writeInt(commandSize);
+            if(in.readByte() != Command.commandOK){
+                callback.callback(false);
+                return;
+            }
+            out.writeByte(Command.create_DIRECTORY);
+            out.writeInt(dirName.getBytes(StandardCharsets.UTF_8).length);
+            out.write(dirName.getBytes(StandardCharsets.UTF_8));
+            if (in.readByte() == Command.commandOK){
+                callback.callback(true);
+            } else {callback.callback(false);}
+        } catch (IOException e){
+            e.printStackTrace();
+        }
     }
 }
