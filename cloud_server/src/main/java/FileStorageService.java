@@ -1,14 +1,14 @@
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.*;
+import server.ClientStatus;
 import server.Const;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.stream.Collectors;
 
 public class FileStorageService {
@@ -29,8 +29,6 @@ public class FileStorageService {
     }
 
     public static void uploadFile(ClientStatus clientStatus, ByteBuf accumulator, byte[] bytes, Callback callback) throws IOException {
-        //try (RandomAccessFile raf = new RandomAccessFile(Const.CLOUD_PACKAGE + "/" + clientStatus.getCurrentDir() + "/" + clientStatus.getCurrentFileName(), "rw")) {
-
             RandomAccessFile raf = clientStatus.getUploadFile();
             if(raf.length() == 0){
                 start = System.currentTimeMillis();
@@ -49,7 +47,6 @@ public class FileStorageService {
                 System.out.println((end - start)/1000 + "upload time");
                 callback.callback();
             }
-       // }
     }
 
     public static void sendStorageInfo(ClientStatus clientStatus, ChannelHandlerContext ctx, String storagePath, Callback callback) throws IOException {
@@ -70,7 +67,7 @@ public class FileStorageService {
         sb_storage_info.append(storagePath);
         if (directoryList.length() > 0) sb_storage_info.append(":" + directoryList);
         if (filesList.length() > 0) sb_storage_info.append(":" + filesList);
-
+        System.out.println(sb_storage_info.toString());
         ByteBuf buf = null;
         buf = ByteBufAllocator.DEFAULT.directBuffer(4 + sb_storage_info.toString().getBytes(StandardCharsets.UTF_8).length);
         buf.writeInt(sb_storage_info.toString().getBytes(StandardCharsets.UTF_8).length);
@@ -79,9 +76,54 @@ public class FileStorageService {
         callback.callback();
     }
 
-    public static void deleteFile(ClientStatus clientStatus, Callback callback) throws IOException {
-        boolean bool = Files.deleteIfExists(Paths.get(Const.CLOUD_PACKAGE + "/" + clientStatus.getCurrentDir() + "/" + clientStatus.getCurrentFileName()));
-        if(bool) callback.callback();
+    public static void deleteFile(ClientStatus clientStatus, Callback callback) {
+        try {
+            Path directory = Paths.get(Const.CLOUD_PACKAGE + "/" + clientStatus.getCurrentDir() + "/" + clientStatus.getCurrentFileName());
+            System.out.println(directory.getFileName().toString());
+
+
+            FileVisitor visitor = new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    System.out.println("удаляем файл " + file.getFileName().toString());
+                    Files.delete(file);
+                    System.out.println("удалили");
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                    Files.delete(file);
+                    System.out.println("visitFileFailed");
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                    if(exc != null){
+                        System.out.println("null exc");
+                        throw exc;
+                    }
+                    System.out.println("удаляем папку " + dir.getFileName().toString());
+                    //boolean b = dir.toFile().delete();
+                    Files.delete(dir);
+                    System.out.println("удалили ");
+                    return FileVisitResult.CONTINUE;
+                }
+            };
+
+            Path path = Files.walkFileTree(directory, visitor);
+
+            if (!Files.exists(path)) {
+                System.out.println("before callback");
+                callback.callback();
+            }
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+
+//        boolean bool = Files.deleteIfExists(Paths.get(Const.CLOUD_PACKAGE + "/" + clientStatus.getCurrentDir() + "/" + clientStatus.getCurrentFileName()));
+//        if(bool) callback.callback();
     }
 
 

@@ -2,7 +2,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import server.ClientStatus;
 import server.Const;
+import server.CurrentAction;
 
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
@@ -91,8 +93,8 @@ public class MainHandler extends ChannelInboundHandlerAdapter {
                 @Override
                 public void callback() {
                     System.out.println("file deleted");
-                    sendCommand(ctx, Command.commandOK);
                     clearStatusSetWaitCommand(ctx);
+                    sendCommand(ctx, Command.commandOK);
                 }
             } );
             return;

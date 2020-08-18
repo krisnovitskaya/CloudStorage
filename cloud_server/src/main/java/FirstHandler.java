@@ -1,7 +1,9 @@
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.*;
+import server.ClientStatus;
 import server.Const;
+import server.CurrentAction;
 
 import java.io.IOException;
 import java.nio.file.Files;

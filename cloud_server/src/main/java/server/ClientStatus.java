@@ -1,3 +1,5 @@
+package server;
+
 import java.io.RandomAccessFile;
 
 public class ClientStatus {
