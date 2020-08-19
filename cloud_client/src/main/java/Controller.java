@@ -456,4 +456,12 @@ public class Controller implements Initializable {
                }
            });
     }
+
+    public void btnRename(ActionEvent actionEvent) {
+        System.out.println("заготовка");
+    }
+
+    public void btnMove(ActionEvent actionEvent) {
+        System.out.println("заготовка");
+    }
 }
