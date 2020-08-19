@@ -105,7 +105,6 @@ public class Network {
                 int readBytes;
                 while (fis.available() > 0) {
                     Platform.runLater(() -> {
-
                         try {
                             progressBar.setProgress((double) (selectedFileSize - fis.available())/selectedFileSize);
                         } catch (IOException e) {
