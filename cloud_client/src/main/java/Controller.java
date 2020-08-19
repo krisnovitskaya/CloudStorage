@@ -14,10 +14,8 @@ import javafx.scene.text.Text;
 
 import java.io.IOException;
 import java.net.URL;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -364,7 +362,7 @@ public class Controller implements Initializable {
     public void btnDelete(ActionEvent actionEvent) {
         if(filesTable.isFocused()){
             try {
-                Files.delete(Paths.get(getCurrentPath() + "/" + getSelectedFilename()));
+                deleteDir(Paths.get(getCurrentPath() + "/" + getSelectedFilename()));
                 updateList(Paths.get(getCurrentPath()));
             } catch (IOException e) {
                 e.printStackTrace();
@@ -425,5 +423,37 @@ public class Controller implements Initializable {
             });
 
         }
+    }
+
+    private void deleteDir(Path dir) throws IOException {
+
+            Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+               @Override
+               public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                   System.out.println("удаляем файл " + file.getFileName().toString());
+                   Files.delete(file);
+                   System.out.println("удалили");
+                   return FileVisitResult.CONTINUE;
+               }
+
+               @Override
+               public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                   Files.delete(file);
+                   System.out.println("visitFileFailed");
+                   return FileVisitResult.CONTINUE;
+               }
+
+               @Override
+               public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                   if(exc != null){
+                       System.out.println("null exc");
+                       throw exc;
+                   }
+                   System.out.println("удаляем папку " + dir.getFileName().toString());
+                   Files.delete(dir);
+                   System.out.println("удалили ");
+                   return FileVisitResult.CONTINUE;
+               }
+           });
     }
 }

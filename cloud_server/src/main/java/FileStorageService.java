@@ -67,7 +67,7 @@ public class FileStorageService {
         sb_storage_info.append(storagePath);
         if (directoryList.length() > 0) sb_storage_info.append(":" + directoryList);
         if (filesList.length() > 0) sb_storage_info.append(":" + filesList);
-        System.out.println(sb_storage_info.toString());
+        //System.out.println(sb_storage_info.toString());
         ByteBuf buf = null;
         buf = ByteBufAllocator.DEFAULT.directBuffer(4 + sb_storage_info.toString().getBytes(StandardCharsets.UTF_8).length);
         buf.writeInt(sb_storage_info.toString().getBytes(StandardCharsets.UTF_8).length);
@@ -105,7 +105,6 @@ public class FileStorageService {
                         throw exc;
                     }
                     System.out.println("удаляем папку " + dir.getFileName().toString());
-                    //boolean b = dir.toFile().delete();
                     Files.delete(dir);
                     System.out.println("удалили ");
                     return FileVisitResult.CONTINUE;
@@ -121,9 +120,6 @@ public class FileStorageService {
         }catch (IOException e){
             e.printStackTrace();
         }
-
-//        boolean bool = Files.deleteIfExists(Paths.get(Const.CLOUD_PACKAGE + "/" + clientStatus.getCurrentDir() + "/" + clientStatus.getCurrentFileName()));
-//        if(bool) callback.callback();
     }
 
 
