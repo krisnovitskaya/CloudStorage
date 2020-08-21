@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 public class Network {
@@ -100,22 +101,35 @@ public class Network {
                     callback.callback(false);
                     return;
                 }
-                FileInputStream fis = new FileInputStream(path + "/" + selectedFilename);
                 byte[] buffer = new byte[1024 * 5 * 1024];
                 int readBytes;
-                while (fis.available() > 0) {
-                    Platform.runLater(() -> {
-
-                        try {
-                            progressBar.setProgress((double) (selectedFileSize - fis.available())/selectedFileSize);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    });
-                    readBytes = fis.read(buffer);
-                    out.write(buffer, 0, readBytes);
+                try(RandomAccessFile raf = new RandomAccessFile(path + "/" + selectedFilename, "r")){
+                    AtomicLong count = new AtomicLong(0L);
+                    while(raf.getFilePointer() != raf.length()){
+                        readBytes = raf.read(buffer);
+                        out.write(buffer, 0, readBytes);
+                        count.getAndAdd(readBytes);
+                        Platform.runLater(() -> {
+                            progressBar.setProgress((double) count.get() /selectedFileSize);
+                        });
+                    }
                 }
-                fis.close();
+//                FileInputStream fis = new FileInputStream(path + "/" + selectedFilename);
+//                byte[] buffer = new byte[1024 * 5 * 1024];
+//                int readBytes;
+//                while (fis.available() > 0) {
+//                    Platform.runLater(() -> {
+//
+//                        try {
+//                            progressBar.setProgress((double) (selectedFileSize - fis.available())/selectedFileSize);
+//                        } catch (IOException e) {
+//                            e.printStackTrace();
+//                        }
+//                    });
+//                    readBytes = fis.read(buffer);
+//                    out.write(buffer, 0, readBytes);
+//                }
+         //       fis.close();
                 callback.callback(in.readByte() == Command.commandOK);
             } catch (IOException e) {
                 callback.callback(false);
