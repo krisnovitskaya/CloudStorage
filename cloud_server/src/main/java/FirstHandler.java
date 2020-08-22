@@ -8,14 +8,17 @@ import server.CurrentAction;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
 
 public class FirstHandler extends ChannelInboundHandlerAdapter {
+    static Set<String> connectedUsers = new HashSet<>();
+
     private ClientStatus clientStatus;
     private ByteBuf accumulator;
     public final int COMMAND_ACC_CAPACITY = 4;
-
-
     private byte[] bytes = new byte[65536];
+
 
 
     public FirstHandler(){
@@ -98,6 +101,11 @@ public class FirstHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        connectedUsers.remove(clientStatus.getLogin());
         System.out.println(clientStatus.getLogin() + " отключился");
+    }
+
+    public static Set<String> getConnectedUsers() {
+        return connectedUsers;
     }
 }

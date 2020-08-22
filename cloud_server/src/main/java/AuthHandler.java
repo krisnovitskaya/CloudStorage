@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+
 public class AuthHandler extends ChannelInboundHandlerAdapter {
 
 
@@ -27,7 +28,10 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
         accumulator.readBytes(data);
         accumulator.clear();
         String[] authData = new String(data, StandardCharsets.UTF_8).split(" ");   // login pass #  ili login pass &
-
+        if(FirstHandler.getConnectedUsers().contains(authData[0])){
+            restartAuth(ctx);
+            return;
+        }
         if (authData[2].equals("#")) {
             if (DBService.checkLoginPass(authData[0], authData[1])) {
                 if(!Files.exists(Paths.get(Const.CLOUD_PACKAGE + "/" + authData[0]))) {
@@ -50,7 +54,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
             if (DBService.addUser(authData[0], authData[1])) {
                 Files.createDirectory(Paths.get(Const.CLOUD_PACKAGE + "/" + authData[0]));
                 finishAuth(ctx, authData[0]);
-                //контроль уже залогиненных пользователей
+
             }else {
                 restartAuth(ctx);
             }
@@ -63,6 +67,7 @@ public class AuthHandler extends ChannelInboundHandlerAdapter {
         ctx.pipeline().get(FirstHandler.class).getClientStatus().setCurrentDir(login);
         ctx.pipeline().addLast(new MainHandler(ctx.pipeline().get(FirstHandler.class).getClientStatus()));
         ctx.pipeline().get(FirstHandler.class).setAccumulatorCapacity(ctx,ctx.pipeline().get(FirstHandler.class).COMMAND_ACC_CAPACITY, ctx.pipeline().get(FirstHandler.class).COMMAND_ACC_CAPACITY);
+        FirstHandler.getConnectedUsers().add(login);
         sendCommand(ctx, Command.commandOK);
         ctx.pipeline().remove(this);
     }
