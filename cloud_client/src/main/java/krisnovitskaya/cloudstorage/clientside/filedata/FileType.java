@@ -1,4 +1,4 @@
-package client;
+package krisnovitskaya.cloudstorage.clientside.filedata;
 
 public enum FileType {
     FILE("F"), DIRECTORY("D");

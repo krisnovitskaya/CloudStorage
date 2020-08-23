@@ -1,10 +1,15 @@
+package krisnovitskaya.cloudstorage.server.handlers;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import server.ClientStatus;
-import server.Const;
-import server.CurrentAction;
+import krisnovitskaya.cloudstorage.common.callbacks.BoolCallback;
+import krisnovitskaya.cloudstorage.common.callbacks.Callback;
+import krisnovitskaya.cloudstorage.common.infoBytes.Command;
+import krisnovitskaya.cloudstorage.server.keepers.ClientStatus;
+import krisnovitskaya.cloudstorage.server.keepers.Const;
+import krisnovitskaya.cloudstorage.server.keepers.CurrentAction;
 
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;

@@ -1,10 +1,13 @@
-import DataBase.DBService;
+package krisnovitskaya.cloudstorage.server.handlers;
+
+import krisnovitskaya.cloudstorage.server.dataBase.DBService;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import server.Const;
-import server.CurrentAction;
+import krisnovitskaya.cloudstorage.common.infoBytes.Command;
+import krisnovitskaya.cloudstorage.server.keepers.Const;
+import krisnovitskaya.cloudstorage.server.keepers.CurrentAction;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

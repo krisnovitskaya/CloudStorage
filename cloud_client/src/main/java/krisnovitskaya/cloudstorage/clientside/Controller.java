@@ -1,5 +1,5 @@
-import client.FileInfo;
-import client.StorageFileInfo;
+package krisnovitskaya.cloudstorage.clientside;
+
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -11,6 +11,9 @@ import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Text;
+import krisnovitskaya.cloudstorage.clientside.filedata.FileInfo;
+import krisnovitskaya.cloudstorage.clientside.filedata.StorageFileInfo;
+import krisnovitskaya.cloudstorage.common.callbacks.BoolCallback;
 
 import java.io.IOException;
 import java.net.URL;

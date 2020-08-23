@@ -1,4 +1,4 @@
-package server;
+package krisnovitskaya.cloudstorage.server.keepers;
 
 import java.io.RandomAccessFile;
 

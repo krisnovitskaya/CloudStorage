@@ -1,4 +1,4 @@
-package server;
+package krisnovitskaya.cloudstorage.server.keepers;
 
 public class Const {
     public static final String CLOUD_PACKAGE = "cloudserver_logins";

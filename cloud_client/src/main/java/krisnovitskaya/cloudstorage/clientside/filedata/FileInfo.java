@@ -1,4 +1,4 @@
-package client;
+package krisnovitskaya.cloudstorage.clientside.filedata;
 
 import java.io.IOException;
 import java.nio.file.Files;
