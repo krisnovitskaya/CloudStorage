@@ -4,7 +4,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox alignment="center" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller">
+<VBox alignment="center" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="krisnovitskaya.cloudstorage.clientside.Controller">
     <HBox  fx:id="auth" spacing="10">
         <Label text="Логин" HBox.hgrow="ALWAYS"  />
         <TextField fx:id="loginField" HBox.hgrow="ALWAYS" />
@@ -24,21 +24,8 @@
     </MenuBar>
 
     <HBox VBox.vgrow="ALWAYS">
-        <VBox HBox.hgrow="ALWAYS">
-            <HBox >
-                <Button onAction="#btnPathUpAction" text="Вверх" />
-                <ComboBox fx:id="disksBox" onAction="#selectDiskAction" />
-                <TextField fx:id="pathField" editable="false" HBox.hgrow="ALWAYS" />
-            </HBox>
-            <TableView fx:id="filesTable" VBox.vgrow="ALWAYS" />
-        </VBox>
-        <VBox HBox.hgrow="ALWAYS">
-            <HBox >
-                <Button text="Вверх" fx:id="storageBtnUp" onAction="#storageDirUp"/>
-                <TextField fx:id="storagePathField" editable="false" HBox.hgrow="ALWAYS" />
-            </HBox>
-            <TableView fx:id="storageFilesTable" VBox.vgrow="ALWAYS" />
-        </VBox>
+        <fx:include fx:id="localePanel" source="localePanel.fxml" HBox.hgrow="ALWAYS" />
+        <fx:include fx:id="storagePanel" source="storagePanel.fxml" HBox.hgrow="ALWAYS" />
     </HBox>
 
 

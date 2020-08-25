@@ -41,7 +41,7 @@
                     </descriptorRefs>
                     <archive>
                         <manifest>
-                            <mainClass>ServerApp</mainClass>
+                            <mainClass>krisnovitskaya.cloudstorage.server.ServerApp</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

@@ -1,3 +1,5 @@
+package krisnovitskaya.cloudstorage.common.infoBytes;
+
 public class Command {
     public static final byte commandOK = 15;
     public static final byte commandNO = 20;

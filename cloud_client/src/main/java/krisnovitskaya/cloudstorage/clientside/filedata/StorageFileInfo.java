@@ -1,4 +1,4 @@
-package client;
+package krisnovitskaya.cloudstorage.clientside.filedata;
 
 public class StorageFileInfo {
     private String filename;
