@@ -13,13 +13,12 @@ import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class FileStorageService {
     static long start;
-
-
-
 
 
     public static void sendToClientFile(ChannelHandlerContext ctx, ClientStatus clientStatus, ChannelFutureListener finishListener) throws IOException {
@@ -33,45 +32,51 @@ public class FileStorageService {
     }
 
     public static void uploadFile(ClientStatus clientStatus, ByteBuf accumulator, byte[] bytes, Callback callback) throws IOException {
-            RandomAccessFile raf = clientStatus.getUploadFile();
-            if(raf.length() == 0){
-                start = System.currentTimeMillis();
-                System.out.println("start upload");
-            }
-            raf.seek(raf.length());
-            int readableBytes = accumulator.readableBytes();
-            accumulator.readBytes(bytes, 0, readableBytes);
-            accumulator.clear();
-            raf.write(bytes, 0, readableBytes);
-            if (raf.length() == clientStatus.getCurrentFileSize()) {
-                raf.close();
-                clientStatus.setUploadFile(null);
-                long end = System.currentTimeMillis();
-                System.out.println("end upload");
-                System.out.println((end - start)/1000 + "upload time");
-                callback.callback();
-            }
+        RandomAccessFile raf = clientStatus.getUploadFile();
+        if (raf.length() == 0) {
+            start = System.currentTimeMillis();
+            System.out.println("start upload");
+        }
+        raf.seek(raf.length());
+        int readableBytes = accumulator.readableBytes();
+        accumulator.readBytes(bytes, 0, readableBytes);
+        accumulator.clear();
+        raf.write(bytes, 0, readableBytes);
+        if (raf.length() == clientStatus.getCurrentFileSize()) {
+            raf.close();
+            clientStatus.setUploadFile(null);
+            long end = System.currentTimeMillis();
+            System.out.println("end upload");
+            System.out.println((end - start) / 1000 + "upload time");
+            callback.callback();
+        }
     }
 
-    public static void sendStorageInfo(ClientStatus clientStatus, ChannelHandlerContext ctx, String storagePath, Callback callback) throws IOException {
+    public static void sendStorageInfo(ClientStatus clientStatus, ChannelHandlerContext ctx, String storagePath, Callback callback) {
         clientStatus.setCurrentDir(storagePath);
-        String directoryList = Files.list(Paths.get(Const.CLOUD_PACKAGE + "/" + storagePath))
-                .filter(p -> Files.isDirectory(p))
-                .map(p -> p.getFileName() + ":-1" )
-                .collect(Collectors.joining(":"));
+        String directoryList;
+        try (Stream<Path> dirs = Files.list(Paths.get(Const.CLOUD_PACKAGE + "/" + storagePath))) {
+            directoryList = dirs.filter(p -> Files.isDirectory(p))
+                    .map(p -> p.getFileName() + ":-1")
+                    .collect(Collectors.joining(":"));
+        } catch (IOException e) {
+            throw new RuntimeException("Something wrong with stream dirs");
+        }
 
-        String filesList = Files.list(Paths.get(Const.CLOUD_PACKAGE + "/" + storagePath))
-                .filter(p -> !Files.isDirectory(p))
-                .map(Path::toFile)
-                .map(file -> file.getName() + ":" + file.length() )
-                .collect(Collectors.joining(":"));
-
+        String filesList;
+        try (Stream<Path> files = Files.list(Paths.get(Const.CLOUD_PACKAGE + "/" + storagePath))) {
+            filesList = files.filter(p -> !Files.isDirectory(p))
+                    .map(Path::toFile)
+                    .map(file -> file.getName() + ":" + file.length())
+                    .collect(Collectors.joining(":"));
+        } catch (IOException e) {
+            throw new RuntimeException("Something wrong with stream dirs");
+        }
 
         StringBuilder sb_storage_info = new StringBuilder();
         sb_storage_info.append(storagePath);
         if (directoryList.length() > 0) sb_storage_info.append(":" + directoryList);
         if (filesList.length() > 0) sb_storage_info.append(":" + filesList);
-        //System.out.println(sb_storage_info.toString());
         ByteBuf buf = null;
         buf = ByteBufAllocator.DEFAULT.directBuffer(4 + sb_storage_info.toString().getBytes(StandardCharsets.UTF_8).length);
         buf.writeInt(sb_storage_info.toString().getBytes(StandardCharsets.UTF_8).length);
@@ -104,7 +109,7 @@ public class FileStorageService {
 
                 @Override
                 public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                    if(exc != null){
+                    if (exc != null) {
                         System.out.println("null exc");
                         throw exc;
                     }
@@ -121,17 +126,17 @@ public class FileStorageService {
                 System.out.println("before callback");
                 callback.callback();
             }
-        }catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
 
-    public static void createDirectory(ClientStatus clientStatus, String dirName, BoolCallback callback){
-        try{
+    public static void createDirectory(ClientStatus clientStatus, String dirName, BoolCallback callback) {
+        try {
             Files.createDirectory(Paths.get(Const.CLOUD_PACKAGE + "/" + clientStatus.getCurrentDir() + "/" + dirName));
             callback.callback(true);
-        }catch (IOException e){
+        } catch (IOException e) {
             callback.callback(false);
         }
 
